@@ -1,0 +1,170 @@
+\documentclass[10pt,a4paper,notitlepage,oneside,twocolumn]{abst_jsarticle}
+% notitlepage : \titlepage は独立しない
+% oneside : 奇数・偶数ページは同じデザイン
+% twocolumn : 2段組
+% \setlength{\textwidth}{\fullwidth}
+% 本文領域はページ一杯で, 傍注の幅を取らない
+
+\usepackage[dvipdfmx]{graphicx, color}
+% \usepackage{amsmath}
+\usepackage{amsmath,amssymb}
+\usepackage{comment}
+
+\usepackage{url}
+\usepackage{here}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hhline} 
+\usepackage[hang,small,bf]{caption}
+\usepackage[subrefformat=parens]{subcaption}
+% \usepackage{tabularx}
+% \usepackage[dvipdfm]{graphicx}
+%\numberwithin{equation}{section}
+
+\usepackage[hmargin=2truecm, textheight= 78zw]{geometry}
+\columnsep=\dimexpr \textwidth - 50zw \relax
+
+%%\unitlength=1pt
+%%\renewcommand{\baselinestretch}{0.8}
+
+\title{
+{\bf タイトル}
+}
+
+\author{\begin{center}
+{\large {\bf 11N8101099A　草野 みどり}}\\
+{\large {\bf 情報工学専攻　●●研究室}}\\
+{\large {\bf 20XX年X月}}
+\end{center}}
+
+\date{}
+\pagestyle{empty}
+
+\begin{document}
+
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{はじめに} \label{sec:intro}
+
+進捗状況報告書は，2年間にわたる修士論文研究の進捗が適切な状況にあるかどうかを半期ごとに自己点検し，
+今後の研究推進に関する方針・計画を明確にするためのものである．
+このため，進捗状況報告書には，これまでの研究調査のまとめ，課題の発見・特定の状況，課題解決に向けた研究方針，
+これまでに実施した調査・実験や得られた知見，さらに今後の研究計画を含むことが一般的だが，指導教授の指示を優先して執筆すること．
+
+修士1年前期に提出する進捗状況報告書のファイル名は“学籍番号\_PR1.pdf”とする．
+たとえば，学籍番号が11N8100099Aの場合，報告書のファイル名は11N8100099A\_PR1.pdfとなる．
+修士1年後期の報告書のファイル名は“学籍番号\_PR2.pdf”とし，
+修士2年前期の報告書のファイル名は“学籍番号\_PR3.pdf”とする．
+
+
+
+\section{報告書の構成}
+
+進捗状況報告書はA4タテ判2ページに2段組でまとめ，ひとつのPDFファイルとし，日本語または英語で記述すること．
+冒頭に書くべき情報は以下のとおりである．
+\begin{enumerate}
+\item 表題（研究テーマを記述する．“進捗状況報告”を意味する用語は含めない．）
+\item 所属研究室
+\item 学籍番号および氏名
+\end{enumerate}
+研究室名の一覧を以下に載せる．
+
+\smallskip
+
+\noindent
+アルゴリズム理論基礎研究室／アルゴリズム工学研究室／数値情報処理研究室／
+確率的構造研究室／知能・情報制御研究室／数理最適化研究室／情報通信工学研究室／
+空間情報技術研究室／離散アルゴリズム研究室／システム解析・可視化研究室／形状情報処理研究室
+
+\smallskip
+
+
+{\em 提出前に指導教授と十分に打ち合わせを行い，本文の詳細な様式・構成は指導教授の指示に従うこと．}
+指導教授や同じ研究室の学生だけでなく，情報工学専攻教員も報告相手に想定し，論理的かつ明快な記述とすること．
+
+
+
+\section{図と表に関する注意}
+
+図・表には通し番号と見出し(caption)を付け，本文中で当該の図・表に言及する．また，単位や目盛を正確に記す．
+例を図\ref{fig:logo}と表\ref{tab:results}に示す．
+図のタイトルは図の下に，表のタイトルは表の上に書く．
+
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[scale=0.35]{logo_color.png}
+    \caption{情報工学科のロゴ}
+    \label{fig:logo}
+  \end{figure}
+
+\begin {table}[t]
+    \centering
+  \caption{表のタイトル}
+  \label{tab:results}
+  \begin {tabular}{ccc} \hline
+     項目1 & 項目2 & 項目3 \\ \hline
+    データ1 & データ2 & データ3 \\
+    データ1 & データ2 & データ3 \\
+    データ1 & データ2 & データ3 \\ \hline
+  \end {tabular}
+\end {table}
+
+\section{参考文献の書き方}
+
+一例として，和文の著書\cite{suetake}，和文の論文誌\cite{kusano}，英文の編書\cite{fuortes}，
+英文の論文誌\cite{rice}，国際会議\cite{guibas}，修士論文\cite{chudai}，電子雑誌\cite{iwama}，Webページ\cite{IPSJ}を，
+2ページの参考文献の節に載せる．{\em 参考文献には信頼性が高く，後世に残るものを載せるように注意せよ．}
+
+書くべき情報は以下のとおりである．
+\begin{itemize}
+\item 和文の著書: 著者，書名，シリーズ名(あれば)，発行所，都市，年．
+\item 和文の論文誌: 著者，題名，誌名，巻，号，頁，年．
+\item 英文の編書: 編者，書名，発行所，都市，年．
+\item 英文の論文誌: 著者，題名，誌名，巻，号，頁，年．
+\item 国際会議: 著者，題名，予稿集名，都市，コード等，頁，年．
+\item 修士論文: 著者，題名，機関名，年．
+\item 電子雑誌: 著者，題名，誌名，巻，号，頁（オンライン），DOI，西暦年．
+\item Webページ: 著者，Webページの題名，Webサイトの名称（オンライン）（ただし，著者と同じ場合は省略可），入手先〈URL〉（参照日付）．
+\end{itemize}
+英語の文献はすべて半角文字で書く．参考文献には本文で引用した文献のみ載せる．
+情報処理学会の論文誌の原稿執筆案内\cite{IPSJ}も参考になる．
+
+通し番号は，引用順または著者名のアルファベット順に付ける．
+文献の引用のしかたは分野ごとに異なるので，{\em 自己流では書かず，当該分野の論文誌などを参考にする}こと．
+
+
+% 参考文献
+\begin{thebibliography}{99}
+
+\bibitem{suetake}
+末武国弘，科学論文をどう書くか，講談社ブルーバックス，講談社，東京，1981. 
+
+\bibitem{kusano}
+草野花子，中大太郎，パラメトリック増幅器，電子情報通信学会論文誌，vol.~J62-B, no.~1, pp.~20--27, 1979. 
+
+\bibitem{fuortes}
+M. G. F. Fuortes, ed., \textit{Handbook of Sensory Physiology}, Springer-Verlag, Berlin, 1972.
+
+\bibitem{rice}
+W. Rice, A. C. Wine, and B. D. Grain, Diffusion of impurities during epitaxy, \textit{Proc. IEEE}, vol.~52, no.~3, pp.~284--290, 1964.
+
+\bibitem{guibas}
+L. J. Guibas and R. Sedgewick, A dichromatic framework for balanced trees, 
+\textit{Proc. 19th IEEE Sympos. Found. Comput. Sci.}, Ann Arbor, pp.~8--21, 1978.
+
+\bibitem{chudai}
+中大次郎，マルチメディアと数理工学，中央大学大学院理工学研究科情報工学専攻修士論文，1998.
+
+\bibitem{iwama}
+K. Iwama, A. Kawachi, and S. Yamashita, Quantum biased oracles, \textit{IPSJ Digital Courier}, vol.~1, pp.~461--469 (online), DOI: 10.2197/ipsjdc.1.461, 2005.
+
+\bibitem{IPSJ}
+情報処理学会，論文誌ジャーナル（IPSJ Journal）原稿執筆案内，情報処理学会（オンライン），入手先〈\url{https://www.ipsj.or.jp/journal/submit/ronbun_j_prms.html}〉（参照2022-04-25）．
+
+
+
+\end{thebibliography}
+\end{document}
