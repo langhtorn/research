@@ -31,16 +31,21 @@ vector<Vector2d> make_hexagon(Vector3d center,double length){
     return H;
 }
 
-// ハニカムサンプリング(入力：最小包含の座標)
-vector<Vector2d> honeycomb(Vector2d min,Vector2d max){
+// ハニカムサンプリング(入力：最小包含の座標,一辺の長さ)
+vector<Vector2d> honeycomb(Vector2d min,Vector2d max,double r){
     vector<Vector2d> sample;
     double i=min(0),j=min(1);
     while(j<max(1)){ //最大のy座標
+        i=min(0);
         while(i<max(0)){ //最大のx座標
-            Vedtor2d center{i,j};
-            sample.insert(sample.end(),make_hexagon())
+            Vector2d center{i,j};
+            vector<Vector2d> mh=make_hexagon(center,r);
+            sample.insert(sample.end(),mh.begin(),mh.end());
+            i+=r*3;
         }
+        j+=r*sin(1.04719755);
     }
+    return sample;
 }
 
 int main(int argc,char* argv[])
