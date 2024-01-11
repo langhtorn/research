@@ -31,7 +31,7 @@ vector<Vector2d> make_hexagon(Vector3d center,double length){
     return H;
 }
 
-// ハニカムサンプリング(入力：最小包含の座標,一辺の長さ)
+// ハニカムサンプリング(入力：最小包含の座標大小,一辺の長さ)
 vector<Vector2d> honeycomb(Vector2d min,Vector2d max,double r){
     vector<Vector2d> sample;
     double i=min(0),j=min(1);
