@@ -49,7 +49,7 @@ vector<Vector2d> honeycomb(Vector2d min,Vector2d max,double r){
 }
 
 // サポート構築(Lattice)
-vector<Vector3d> L_support(){
+vector<Vector3d> L_support(Vector3d s){
     
 }
 
