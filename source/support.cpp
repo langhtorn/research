@@ -48,6 +48,16 @@ vector<Vector2d> honeycomb(Vector2d min,Vector2d max,double r){
     return sample;
 }
 
+// サポート構築(Lattice)
+vector<Vector3d> L_support(){
+    
+}
+
+// サポート構築(Tree)
+vector<Vector3d> T_support(){
+
+}
+
 int main(int argc,char* argv[])
 {   
     string fn;
@@ -104,3 +114,7 @@ int main(int argc,char* argv[])
     }
     // cout<<"numsize="<<num.size()<<endl;
 }
+
+// 面のクラス分け
+// オーバハングの面だけ残す
+// 隣の面がオーバハングか探索する
