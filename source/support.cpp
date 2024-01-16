@@ -32,7 +32,9 @@ vector<Vector2d> make_hexagon(Vector3d center,double length){
 }
 
 // 点の内外判定
-
+bool point_in_out(Vector3d oh,Vector2d s){
+    
+}
 
 // ハニカムサンプリング(入力：最小包含の座標大小,一辺の長さ)
 vector<Vector2d> honeycomb(Vector2d min,Vector2d max,double r){
