@@ -5,6 +5,7 @@
 #include<vector>
 #include<Eigen/Core>
 #include<Eigen/Geometry>
+#include<Eigen/Dense>
 #include<cmath>
 #include "readobj.hpp"
 #include "overhang.hpp"
@@ -12,28 +13,31 @@
 using namespace std;
 using namespace Eigen;
 
-// 中心点と一辺の長さから正六角形を作る関数
-vector<Vector2d> make_hexagon(Vector3d center,double length){
-    vector<Vector2d> H; //正六角形の各座標
-    double SH=1.04719755; //60°
-    Vector2d H_l={center(0)-length,center(1)};
-    H.push_back(H_l);
-    Vector2d H_r={center(0)+length,center(1)};
-    H.push_back(H_r);
-    Vector2d H_p={H_l(0)+length*cos(SH),H_l(1)+length*sin(SH)};
-    H.push_back(H_p);
-    H_p={H_p(0)+length,H_p(1)};
-    H.push_back(H_p);
-    H_p={H_p(0),H_r(1)+length*-sin(SH)};
-    H.push_back(H_p);
-    H_p={H_p(0)-length,H_p(1)};
-    H.push_back(H_p);
-    return H;
+//六角形のクラス
+struct hexagon
+{
+    int index; //六角形の番号
+    vector<int> hi; //今見ている六角形の回りの六角形のindex
+};
+
+// 60°の計算
+Vector3d make_etriangle(Vector3d p,Vector3d pd,Vector3d n,double length){
+    Vector3d d;
+    MatrixXd A(3,3);
+    A.row(0)=p-pd;
+    A.row(1)=pd-p;
+    A.row(2)=n;
+    Vector3d B(3);
+    B(0)=(1/2)*length*length+(pd.dot(p))-pd.dot(pd);
+    B(1)=(1/2)*length*length+(pd.dot(p))-p.dot(p);
+    B(2)=0;
+    d=A.colPivHouseholderQr().solve(B);
+    return d;
 }
 
 // 点の内外判定
 bool point_in_out(Vector3d oh,Vector2d s){
-    
+
 }
 
 // ハニカムサンプリング(入力：最小包含の座標大小,一辺の長さ)
