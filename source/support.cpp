@@ -127,3 +127,4 @@ int main(int argc,char* argv[])
 // 面のクラス分け
 // オーバハングの面だけ残す
 // 隣の面がオーバハングか探索する
+// https://docs.google.com/spreadsheets/d/1N3K9jsz0g74o5LToadMPtwWfvS1vS7ZjCbrNMR23uYA/edit?usp=sharing
