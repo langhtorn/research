@@ -1,4 +1,4 @@
-TARGETS=readobj overhang support
+TARGETS=support
 LIBS=readobj.cpp overhang.cpp
 
 dummy: $(TARGETS)
