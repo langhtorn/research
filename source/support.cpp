@@ -14,10 +14,10 @@ using namespace std;
 using namespace Eigen;
 
 // 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標)
-vector<Vector2d> grid_cell(vector<Vector3d> V){
-    vector<Vector2d> gc;
+vector<Vector3d> grid_cell(vector<Vector3d> V){
+    vector<Vector3d> gc;
     
-    double x_min=100,x_max=-100,z_min=100,z_max=-100;
+    double x_min=100,x_max=-100,z_min=100,z_max=-100,y_min=100;
     for(int i=0;i<V.size();i++){
         if(x_min>V[i](0)){
             x_min=V[i](0);
@@ -31,11 +31,15 @@ vector<Vector2d> grid_cell(vector<Vector3d> V){
         if(z_max<V[i](2)){
             z_max=V[i](2);
         }
+        if(y_min>V[i](1)){
+            y_min=V[i](1);
+        }
     }
 
-    Vector2d g;
+    Vector3d g;
     g(0)=x_min;
-    g(1)=z_min;
+    g(1)=y_min;
+    g(2)=z_min;
     gc.push_back(g);
     // cout<<"x_min="<<x_min<<" y_min="<<y_min<<endl;
 
@@ -45,7 +49,8 @@ vector<Vector2d> grid_cell(vector<Vector3d> V){
         for(double j=x_min+x_length/100;j<=x_max;j+=x_length/100){
             // cout<<"("<<i<<" ,"<<j<<")"<<endl;
             g(0)=i;
-            g(1)=j;
+            g(1)=y_min;
+            g(2)=j;
             gc.push_back(g);
         }
     }
@@ -57,14 +62,14 @@ vector<Vector2d> grid_cell(vector<Vector3d> V){
     return gc;
 }
 
-// 点だけobjファイル出力(二次元)
-void obj_out(vector<Vector2d> vert,const char* file_name){
+// 点だけobjファイル出力
+void obj_out(vector<Vector3d> vert,const char* file_name){
     FILE* f;
     f=fopen(file_name,"w");
     
     for(int i=0;i<vert.size();i++){
         cout<<vert[i](0)<<","<<vert[i](1)<<endl;
-        fprintf(f,"v %lf 0 %lf\n",vert[i](0),vert[i](1));
+        fprintf(f,"v %lf %lf %lf\n",vert[i](0),vert[i](1),vert[i](2));
     }
 }
 
@@ -108,7 +113,7 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    vector<Vector2d> gc=grid_cell(V);
+    vector<Vector3d> gc=grid_cell(V);
     cout<<"グリッドセルの作成完了\n";
     obj_out(gc,"grid_cell.obj");
 
