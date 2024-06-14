@@ -23,7 +23,7 @@ vector<Vector3d> grid_cell(vector<Vector3d> V){
             x_min=V[i](0);
         }
         if(z_min>V[i](2)){
-           z_min=V[i](1); 
+           z_min=V[i](2); 
         }
         if(x_max<V[i](0)){
             x_max=V[i](0);
