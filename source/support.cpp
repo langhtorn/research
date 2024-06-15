@@ -13,8 +13,8 @@
 using namespace std;
 using namespace Eigen;
 
-// 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標)
-vector<Vector3d> grid_cell(vector<Vector3d> V){
+// 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標,グリッドの分割数)
+vector<Vector3d> grid_cell(vector<Vector3d> V,int n){
     vector<Vector3d> gc;
     
     double x_min=100,x_max=-100,z_min=100,z_max=-100,y_min=100;
@@ -37,20 +37,16 @@ vector<Vector3d> grid_cell(vector<Vector3d> V){
     }
 
     Vector3d g;
-    g(0)=x_min;
-    g(1)=y_min;
-    g(2)=z_min;
-    gc.push_back(g);
     // cout<<"x_min="<<x_min<<" y_min="<<y_min<<endl;
 
     double x_length=x_max-x_min; //横の長さ
     double y_length=z_max-z_min; //縦の長さ
-    for(double i=z_min+y_length/100;i<=z_max;i+=y_length/100){
-        for(double j=x_min+x_length/100;j<=x_max;j+=x_length/100){
+    for(double i=z_min;i<=z_max;i+=y_length/n){
+        for(double j=x_min;j<=x_max;j+=x_length/n){
             // cout<<"("<<i<<" ,"<<j<<")"<<endl;
-            g(0)=i;
+            g(0)=j;
             g(1)=y_min;
-            g(2)=j;
+            g(2)=i;
             gc.push_back(g);
         }
     }
@@ -113,7 +109,7 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    vector<Vector3d> gc=grid_cell(V);
+    vector<Vector3d> gc=grid_cell(V,10);
     cout<<"グリッドセルの作成完了\n";
     obj_out(gc,"grid_cell.obj");
 
