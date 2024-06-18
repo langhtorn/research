@@ -73,9 +73,16 @@ void obj_out(vector<Vector3d> vert,const char* file_name){
 bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
     for(int i=0;i<oh_F.size();i++){
 
-        Vector3d cross_a=P.cross(V[oh_F[i](0)]);
-        Vector3d cross_b=P.cross(V[oh_F[i](1)]);
-        Vector3d cross_c=P.cross(V[oh_F[i](2)]);
+        Vector3d BA=V[oh_F[i](0)]-V[oh_F[i](1)];
+        Vector3d BP=P-V[oh_F[i](1)];
+        Vector3d BC=V[oh_F[i](2)]-V[oh_F[i](1)];
+        Vector3d CP=P-V[oh_F[i](2)];
+        Vector3d CA=V[oh_F[i](0)]-V[oh_F[i](2)];
+
+
+        Vector3d cross_a=BP.cross(BA);
+        Vector3d cross_c=BP.cross(BC);
+        Vector3d cross_b=CP.cross(CA);
 
         if((cross_a(2)>0 && cross_b(2)>0 && cross_c(2)>0) || (cross_a(2)<0 && cross_b(2)<0 && cross_c(2)<0)){ // 外積の向きが揃うとき内側
             return true;
@@ -145,7 +152,7 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    vector<Vector3d> gc=grid_cell(V,10);
+    vector<Vector3d> gc=grid_cell(V,100);
     cout<<"グリッドセルの作成完了\n";
     // obj_out(gc,"grid_cell.obj"); //obj出力
 
