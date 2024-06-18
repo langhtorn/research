@@ -64,14 +64,50 @@ void obj_out(vector<Vector3d> vert,const char* file_name){
     f=fopen(file_name,"w");
     
     for(int i=0;i<vert.size();i++){
-        cout<<vert[i](0)<<","<<vert[i](1)<<endl;
+        // cout<<vert[i](0)<<","<<vert[i](1)<<endl;
         fprintf(f,"v %lf %lf %lf\n",vert[i](0),vert[i](1),vert[i](2));
     }
 }
 
+// オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
+bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
+    for(int i=0;i<oh_F.size();i++){
 
-bool point_in_out(Vector3d oh,Vector2d s){
+        Vector3d cross_a=P.cross(V[oh_F[i](0)]);
+        Vector3d cross_b=P.cross(V[oh_F[i](1)]);
+        Vector3d cross_c=P.cross(V[oh_F[i](2)]);
 
+        if((cross_a(2)>0 && cross_b(2)>0 && cross_c(2)>0) || (cross_a(2)<0 && cross_b(2)<0 && cross_c(2)<0)){ // 外積の向きが揃うとき内側
+            return true;
+        }
+
+    }
+    return false;
+}
+
+// オーバハング面の面番号を返す
+vector<int> oh_Fnum(double angle,Vector3d direction,vector<Vector3d> V,vector<Vector3i> F){
+
+    vector<int> of;
+
+    for(int i=0;i<F.size();i++){
+        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])){ //オーバハング面だった場合
+            of.push_back(i); //面番号
+        }
+    }
+
+    return of;
+}
+
+// オーバーハング点の番号を返す(グリッドセルの何番の点か⇒↓)
+vector<int> oh_Vnum(vector<Vector3d> gp,vector<Vector3d> V,vector<Vector3i> oh_F){
+    vector<int> ohv;
+
+    for(int i=0;i<gp.size();i++){
+        if(point_in_out(gp[i],V,oh_F)) ohv.push_back(i); //オーバハング点だった場合
+    }
+
+    return ohv;
 }
 
 // サポート構築(Lattice)
@@ -111,17 +147,49 @@ int main(int argc,char* argv[])
     // x,y平面グリッドセルの作成
     vector<Vector3d> gc=grid_cell(V,10);
     cout<<"グリッドセルの作成完了\n";
-    obj_out(gc,"grid_cell.obj");
+    // obj_out(gc,"grid_cell.obj"); //obj出力
 
-    // // 面のオーバハングを調べる
-    // cout<<"面のオーバーハングを調べる"<<F.size()<<endl;
-    // double angle=0.6108652381980153; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483
-    // Vector3d direction(0,-1,0); //造形方向ベクトル
-    // vector<int> num; //オーバーハングかどうか(1 or 0)
-    // for(int i=0;i<F.size();i++){
-    //     if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])) num.push_back(1);
-    //     else num.push_back(0);
-    // }
+    double y_min=100;
+    for(int i=0;i<V.size();i++){ //y座標最小値
+        if(y_min>V[i](1)){
+            y_min=V[i](1);
+        }
+    }
+
+    // 面のオーバハングを調べる
+    cout<<"面のオーバーハングを調べる"<<F.size()<<endl;
+    double angle=0.6108652381980153; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483
+    Vector3d direction(0,-1,0); //造形方向ベクトル
+    vector<int> num; //その面がオーバーハングかどうか(1 or 0)
+    for(int i=0;i<F.size();i++){
+        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])) num.push_back(1);
+        else num.push_back(0);
+    }
+
+    // オーバハング点の判定
+    vector<int> oF=oh_Fnum(angle,direction,V,F); // オーバーハング面の集合を作る
+    // Vの射影
+    vector<Vector3d> Vs;
+    for(int i=0;i<V.size();i++){
+        Vector3d vss={V[i](0),y_min,V[i](2)};
+        Vs.push_back(vss);
+    }
+    vector<Vector3i> oh_F; //オーバハングだけの面
+    for(int i=0;i<oF.size();i++){
+        Vector3i ohf={F[oF[i]](0),F[oF[i]](1),F[oF[i]](2)};
+        oh_F.push_back(ohf);
+    }
+    vector<int> oh_point=oh_Vnum(gc,Vs,oh_F); //オーバーハング点の点番号
+    
+    // デバッグ
+    vector<Vector3d> ohp;
+    cout<<"gc="<<gc.size()<<" ohp="<<oh_point.size()<<endl;
+    for(int i=0;i<oh_point.size();i++){
+        Vector3d op=gc[oh_point[i]];
+        ohp.push_back(op);
+    }
+
+    obj_out(ohp,"oh_point.obj");
 
     // // vtk出力，結果の可視化
     // FILE* fpv;
