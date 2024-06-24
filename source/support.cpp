@@ -81,14 +81,21 @@ bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
 
 
         Vector3d cross_a=BP.cross(BA);
-        Vector3d cross_c=BP.cross(BC);
-        Vector3d cross_b=CP.cross(CA);
+        // cout<<"BP*BA={"<<cross_a<<"}"<<endl;
+        Vector3d cross_c=BC.cross(BP);
+        // cout<<"BC*BP={"<<cross_c<<"}"<<endl;
+        Vector3d cross_b=CA.cross(CP);
+        // cout<<"CA*CP={"<<cross_b<<"}"<<endl;
 
-        if((cross_a(2)>0 && cross_b(2)>0 && cross_c(2)>0) || (cross_a(2)<0 && cross_b(2)<0 && cross_c(2)<0)){ // 外積の向きが揃うとき内側
+        // cout<<"a="<<cross_a(2)<<" b="<<cross_b(2)<<" c="<<cross_c(2)<<endl;
+
+        if((cross_a(1)>=0 && cross_b(1)>=0 && cross_c(1)>=0) || (cross_a(1)<=0 && cross_b(1)<=0 && cross_c(1)<=0)){ // 外積の向きが揃うとき内側
+            // cout<<"内側\n";
             return true;
         }
 
     }
+    // cout<<"外側\n";
     return false;
 }
 
