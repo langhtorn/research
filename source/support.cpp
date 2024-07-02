@@ -14,7 +14,7 @@ using namespace std;
 using namespace Eigen;
 
 // 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標,グリッドの分割数)
-vector<Vector3d> grid_cell(vector<Vector3d> V,int n){
+vector<Vector3d> grid_cell(vector<Vector3d> V,int n,vector<Vector3d> &four){
     vector<Vector3d> gc;
     
     double x_min=100,x_max=-100,z_min=100,z_max=-100,y_min=100;
@@ -35,6 +35,10 @@ vector<Vector3d> grid_cell(vector<Vector3d> V,int n){
             y_min=V[i](1);
         }
     }
+    four.push_back({x_min,y_min,z_min});
+    four.push_back({x_max,y_min,z_min});
+    four.push_back({x_min,y_min,z_max});
+    four.push_back({x_max,y_min,z_max});
 
     Vector3d g;
     // cout<<"x_min="<<x_min<<" y_min="<<y_min<<endl;
@@ -124,9 +128,27 @@ vector<int> oh_Vnum(vector<Vector3d> gp,vector<Vector3d> V,vector<Vector3i> oh_F
     return ohv;
 }
 
+//  四隅の点の作成
+vector<Vector3d>  f_corners(Vector3d P,int Nc,vector<Vector3d> four){
+    double x_length=four[1](0)-four[0](0);
+    double z_length=four[2](2)-four[0](2);
+    double ox=(x_length/Nc)/2;
+    double oz=(z_length/Nc)/2;
+
+    vector<Vector3d> fc;
+    fc.push_back({P(0)-ox,four[0](1),P(2)-oz});
+    fc.push_back({P(0)+ox,four[0](1),P(2)-oz});
+    fc.push_back({P(0)-ox,four[0](1),P(2)+oz});
+    fc.push_back({P(0)+ox,four[0](1),P(2)+oz});
+
+    return fc;
+}
+
 // サポート構築(Lattice)
-vector<Vector3d> L_support(Vector3d s){
-    
+vector<Vector3d> L_support(vector<Vector3d> ohp){
+    for(int i=0;i<ohp.size(),i++){
+        
+    }
 }
 
 // サポート構築(Tree)
@@ -159,7 +181,9 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    vector<Vector3d> gc=grid_cell(V,100);
+    int N_cell=100;
+    vector<Vector3d> four;
+    vector<Vector3d> gc=grid_cell(V,N_cell,four);
     cout<<"グリッドセルの作成完了\n";
     // obj_out(gc,"grid_cell.obj"); //obj出力
 
