@@ -144,9 +144,35 @@ vector<Vector3d>  f_corners(Vector3d P,int Nc,vector<Vector3d> four){
     return fc;
 }
 
+// 柱作成(柱の座標，柱の面,底面の頂点座標,柱の高さ,面番号始まりの点)
+void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double h,int ff){
+    for(int i=0;i<4;i++){
+        pv.push_back(fc[i]);
+    }
+
+    for(int i=0;i<4;i++){
+        pv.push_back({fc[i](0),fc[i](1)+h,fc[i](2)});
+    }
+
+    pf.push_back({ff,ff+2,ff+1});
+    pf.push_back({ff+1,ff+2,ff+3});
+    pf.push_back({ff+6,ff+2,ff+7});
+    pf.push_back({ff+7,ff+2,ff+3});
+    pf.push_back({ff+7,ff+3,ff+5});
+    pf.push_back({ff+5,ff+3,ff+1});
+    pf.push_back({ff+5,ff+1,ff+4});
+    pf.push_back({ff+4,ff+1,ff});
+    pf.push_back({ff+4,ff,ff+6});
+    pf.push_back({ff+6,ff,ff+2});
+
+}
+
 // サポート構築(Lattice)
-vector<Vector3d> L_support(vector<Vector3d> ohp){
-    for(int i=0;i<ohp.size(),i++){
+vector<Vector3d> L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h){
+
+    for(int i=0;i<ohp.size();i++){
+        vector<Vector3d> fc=f_corners(ohp[i],Nc,four); // 四隅の点を求める
+
         
     }
 }
