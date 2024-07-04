@@ -173,7 +173,12 @@ vector<Vector3d> L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,dou
     for(int i=0;i<ohp.size();i++){
         vector<Vector3d> fc=f_corners(ohp[i],Nc,four); // 四隅の点を求める
 
-        
+        vector<Vector3d> pv;
+        vector<Vector3i> pf;
+        pillar();
+        // サポートの配列に一本のサポート柱の情報を入れる
+        // 配列の中身削除
+        // 全オーバーハング点で繰り返し柱作成
     }
 }
 
