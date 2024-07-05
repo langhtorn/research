@@ -73,6 +73,17 @@ void obj_out(vector<Vector3d> vert,const char* file_name){
     }
 }
 
+void obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
+    FILE* f;
+    f=fopen(file_name,"w");
+    for(int i=0;i<V.size();i++){
+        fprintf(f,"v %lf %lf %lf\n",V[i](0),V[i](1),V[i](2));
+    }
+    for(int i=0;i<F.size();i++){
+        fprintf(f,"f %d %d %d\n",F[i](0)+1,F[i](1)+1,F[i](2)+1);
+    }
+}
+
 // オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
 bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
     for(int i=0;i<oh_F.size();i++){
@@ -164,21 +175,29 @@ void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double
     pf.push_back({ff+4,ff+1,ff});
     pf.push_back({ff+4,ff,ff+6});
     pf.push_back({ff+6,ff,ff+2});
+    pf.push_back({ff+4,ff+6,ff+5});
+    pf.push_back({ff+5,ff+6,ff+7});
 
 }
 
-// サポート構築(Lattice)
-vector<Vector3d> L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h){
+// サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
+void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f){
 
+    int f_num=0;
     for(int i=0;i<ohp.size();i++){
         vector<Vector3d> fc=f_corners(ohp[i],Nc,four); // 四隅の点を求める
 
         vector<Vector3d> pv;
         vector<Vector3i> pf;
-        pillar();
+        pillar(pv,pf,fc,h,f_num);
         // サポートの配列に一本のサポート柱の情報を入れる
+        support_v.insert(support_v.end(),pv.begin(),pv.end());
+        support_f.insert(support_f.end(),pf.begin(),pf.end());
         // 配列の中身削除
+        pv.clear();
+        pf.clear();
         // 全オーバーハング点で繰り返し柱作成
+        f_num+=8; //一つの柱に12面あるから
     }
 }
 
@@ -219,9 +238,13 @@ int main(int argc,char* argv[])
     // obj_out(gc,"grid_cell.obj"); //obj出力
 
     double y_min=100;
+    double y_max=-100;
     for(int i=0;i<V.size();i++){ //y座標最小値
         if(y_min>V[i](1)){
             y_min=V[i](1);
+        }
+        if(y_max<V[i](1)){
+            y_max=V[i](1);
         }
     }
 
@@ -259,6 +282,14 @@ int main(int argc,char* argv[])
     }
 
     obj_out(ohp,"oh_point.obj");
+
+    vector<Vector3d> sv;
+    vector<Vector3i> sf;
+    double h=y_max-y_min;
+    cout<<"h="<<h<<endl;
+    L_support(ohp,four,N_cell,h,sv,sf);
+    cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
+    obj_outf(sv,sf,"support_L.obj");
 
     // // vtk出力，結果の可視化
     // FILE* fpv;
