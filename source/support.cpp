@@ -7,9 +7,11 @@
 #include<Eigen/Geometry>
 #include<Eigen/Dense>
 #include<cmath>
-// #include<igl/copyleft/cgal/mesh_boolean.h>
+#include<igl/copyleft/cgal/mesh_boolean.h>
 #include "readobj.hpp"
 #include "overhang.hpp"
+#include "vtomat.hpp"
+#include<igl/writeOBJ.h>
 
 using namespace std;
 using namespace Eigen;
@@ -166,8 +168,8 @@ void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double
         pv.push_back({fc[i](0),fc[i](1)+h,fc[i](2)});
     }
 
-    pf.push_back({ff,ff+2,ff+1});
-    pf.push_back({ff+1,ff+2,ff+3});
+    pf.push_back({ff,ff+3,ff+2});
+    pf.push_back({ff+3,ff+0,ff+1});
     pf.push_back({ff+6,ff+2,ff+7});
     pf.push_back({ff+7,ff+2,ff+3});
     pf.push_back({ff+7,ff+3,ff+5});
@@ -182,7 +184,7 @@ void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double
 }
 
 // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f){
+void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f,vector<Vector3d> V,vector<Vector3i> F){
 
     int f_num=0;
     for(int i=0;i<ohp.size();i++){
@@ -200,6 +202,23 @@ void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector
         // 全オーバーハング点で繰り返し柱作成
         f_num+=8; //一つの柱に12面あるから
     }
+
+    MatrixXd spv;
+    MatrixXi spf;
+    vt vtom;
+    vtom.vmat(support_v,support_f,spv,spf);
+    cout<<"サポート変換\n";
+    igl::writeOBJ("support_L.obj",spv,spf);
+    MatrixXd v;
+    MatrixXi f;
+    vtom.vmat(V,F,v,f);
+    cout<<"元モデル変換\n";
+    MatrixXd boolsupport_v;
+    MatrixXi boolsupport_f;
+    igl::MeshBooleanType boolean_type=static_cast<igl::MeshBooleanType>(2);
+    cout<<"booleanタイプ選び\n";
+    igl::copyleft::cgal::mesh_boolean(spv,spf,v,f,boolean_type,boolsupport_v,boolsupport_f);
+    igl::writeOBJ("boolsupport.obj",boolsupport_v,boolsupport_f);
 }
 
 // サポート構築(Tree)
@@ -288,7 +307,7 @@ int main(int argc,char* argv[])
     vector<Vector3i> sf;
     double h=y_max-y_min;
     cout<<"h="<<h<<endl;
-    L_support(ohp,four,N_cell,h,sv,sf);
+    L_support(ohp,four,N_cell,h,sv,sf,V,F);
     cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
     obj_outf(sv,sf,"support_L.obj");
 
