@@ -88,7 +88,7 @@ void obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
 }
 
 // オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
-bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
+bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F,double h,vector<Vector3d> Vv){
     for(int i=0;i<oh_F.size();i++){
 
         Vector3d BA=V[oh_F[i](0)]-V[oh_F[i](1)];
@@ -109,7 +109,8 @@ bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F){
 
         if((cross_a(1)>=0 && cross_b(1)>=0 && cross_c(1)>=0) || (cross_a(1)<=0 && cross_b(1)<=0 && cross_c(1)<=0)){ // 外積の向きが揃うとき内側
             // cout<<"内側\n";
-            return true;
+            if(Vv[oh_F[i](0)](1)-P(1)>h*0.01) return true;
+            // 面と地面の距離が閾値以下の場合，オーバーハング点にしない．サポートを立てる必要がないから．
         }
 
     }
@@ -132,11 +133,11 @@ vector<int> oh_Fnum(double angle,Vector3d direction,vector<Vector3d> V,vector<Ve
 }
 
 // オーバーハング点の番号を返す(グリッドセルの何番の点か⇒↓)
-vector<int> oh_Vnum(vector<Vector3d> gp,vector<Vector3d> V,vector<Vector3i> oh_F){
+vector<int> oh_Vnum(vector<Vector3d> gp,vector<Vector3d> V,vector<Vector3i> oh_F,double h,vector<Vector3d> Vv){
     vector<int> ohv;
 
     for(int i=0;i<gp.size();i++){
-        if(point_in_out(gp[i],V,oh_F)) ohv.push_back(i); //オーバハング点だった場合
+        if(point_in_out(gp[i],V,oh_F,h,Vv)) ohv.push_back(i); //オーバハング点だった場合
     }
 
     return ohv;
@@ -251,7 +252,7 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    int N_cell=100;
+    int N_cell=30;
     vector<Vector3d> four;
     vector<Vector3d> gc=grid_cell(V,N_cell,four);
     cout<<"グリッドセルの作成完了\n";
@@ -291,7 +292,8 @@ int main(int argc,char* argv[])
         Vector3i ohf={F[oF[i]](0),F[oF[i]](1),F[oF[i]](2)};
         oh_F.push_back(ohf);
     }
-    vector<int> oh_point=oh_Vnum(gc,Vs,oh_F); //オーバーハング点の点番号
+    double h=y_max-y_min;
+    vector<int> oh_point=oh_Vnum(gc,Vs,oh_F,h,V); //オーバーハング点の点番号
     
     // デバッグ
     vector<Vector3d> ohp;
@@ -305,7 +307,6 @@ int main(int argc,char* argv[])
 
     vector<Vector3d> sv;
     vector<Vector3i> sf;
-    double h=y_max-y_min;
     cout<<"h="<<h<<endl;
     L_support(ohp,four,N_cell,h,sv,sf,V,F);
     cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
