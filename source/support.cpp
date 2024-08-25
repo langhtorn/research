@@ -12,61 +12,58 @@
 #include "overhang.hpp"
 #include "vtomat.hpp"
 #include<igl/writeOBJ.h>
+#include "support.hpp"
 
 using namespace std;
 using namespace Eigen;
 
-// 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標,グリッドの分割数)
-vector<Vector3d> grid_cell(vector<Vector3d> V,int n,vector<Vector3d> &four){
-    vector<Vector3d> gc;
-    
+// 最小包含立体
+void spt::aabb(){
     double x_min=100,x_max=-100,z_min=100,z_max=-100,y_min=100;
-    for(int i=0;i<V.size();i++){
-        if(x_min>V[i](0)){
-            x_min=V[i](0);
+    for(int i=0;i<VG.size();i++){
+        if(x_min>VG[i](0)){
+            x_min=VG[i](0);
         }
-        if(z_min>V[i](2)){
-           z_min=V[i](2); 
+        if(z_min>VG[i](2)){
+           z_min=VG[i](2); 
         }
-        if(x_max<V[i](0)){
-            x_max=V[i](0);
+        if(x_max<VG[i](0)){
+            x_max=VG[i](0);
         }
-        if(z_max<V[i](2)){
-            z_max=V[i](2);
+        if(z_max<VG[i](2)){
+            z_max=VG[i](2);
         }
-        if(y_min>V[i](1)){
-            y_min=V[i](1);
+        if(y_min>VG[i](1)){
+            y_min=VG[i](1);
         }
     }
     four.push_back({x_min,y_min,z_min});
     four.push_back({x_max,y_min,z_min});
     four.push_back({x_min,y_min,z_max});
     four.push_back({x_max,y_min,z_max});
+}
+
+// 底面(x,z平面)でのグリッドセルを作る(入力：モデルの座標,グリッドの分割数)
+void spt::grid_cell(){
 
     Vector3d g;
     // cout<<"x_min="<<x_min<<" y_min="<<y_min<<endl;
 
-    double x_length=x_max-x_min; //横の長さ
-    double y_length=z_max-z_min; //縦の長さ
-    for(double i=z_min;i<=z_max;i+=y_length/n){
-        for(double j=x_min;j<=x_max;j+=x_length/n){
+    double x_length=four[3](0)-four[0](0); //横の長さ
+    double y_length=four[3](2)-four[0](2); //縦の長さ
+    for(double i=four[0](2);i<=four[3](2);i+=y_length/N){
+        for(double j=four[0](0);j<=four[3](0);j+=x_length/N){
             // cout<<"("<<i<<" ,"<<j<<")"<<endl;
             g(0)=j;
-            g(1)=y_min;
+            g(1)=four[0](1);
             g(2)=i;
-            gc.push_back(g);
+            gc_V.push_back(g);
         }
     }
-
-    // for(int i=0;i<V.size();i++){
-    //     cout<<gc[i]<<endl;
-    // }
-
-    return gc;
 }
 
 // 点だけobjファイル出力
-void obj_out(vector<Vector3d> vert,const char* file_name){
+void spt::obj_out(vector<Vector3d> vert,const char* file_name){
     FILE* f;
     f=fopen(file_name,"w");
     
@@ -76,7 +73,7 @@ void obj_out(vector<Vector3d> vert,const char* file_name){
     }
 }
 
-void obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
+void spt::obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
     FILE* f;
     f=fopen(file_name,"w");
     for(int i=0;i<V.size();i++){
@@ -88,14 +85,14 @@ void obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
 }
 
 // オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
-bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F,double h,vector<Vector3d> Vv){
-    for(int i=0;i<oh_F.size();i++){
+bool spt::point_in_out(Vector3d P,double h){
+    for(int i=0;i<oh_fn.size();i++){
 
-        Vector3d BA=V[oh_F[i](0)]-V[oh_F[i](1)];
-        Vector3d BP=P-V[oh_F[i](1)];
-        Vector3d BC=V[oh_F[i](2)]-V[oh_F[i](1)];
-        Vector3d CP=P-V[oh_F[i](2)];
-        Vector3d CA=V[oh_F[i](0)]-V[oh_F[i](2)];
+        Vector3d BA=Vs[oh_F[i](0)]-Vs[oh_F[i](1)];
+        Vector3d BP=P-Vs[oh_F[i](1)];
+        Vector3d BC=Vs[oh_F[i](2)]-Vs[oh_F[i](1)];
+        Vector3d CP=P-Vs[oh_F[i](2)];
+        Vector3d CA=Vs[oh_F[i](0)]-Vs[oh_F[i](2)];
 
 
         Vector3d cross_a=BP.cross(BA);
@@ -109,7 +106,7 @@ bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F,double h,v
 
         if((cross_a(1)>=0 && cross_b(1)>=0 && cross_c(1)>=0) || (cross_a(1)<=0 && cross_b(1)<=0 && cross_c(1)<=0)){ // 外積の向きが揃うとき内側
             // cout<<"内側\n";
-            if(Vv[oh_F[i](0)](1)-P(1)>h*0.01) return true;
+            if(VG[oh_F[i](0)](1)-P(1)>h*0.01) return true;
             // 面と地面の距離が閾値以下の場合，オーバーハング点にしない．サポートを立てる必要がないから．
         }
 
@@ -118,37 +115,34 @@ bool point_in_out(Vector3d P,vector<Vector3d> V,vector<Vector3i> oh_F,double h,v
     return false;
 }
 
-// オーバハング面の面番号を返す
-vector<int> oh_Fnum(double angle,Vector3d direction,vector<Vector3d> V,vector<Vector3i> F){
+// オーバハング面の面番号を設定,元モデルで何番の面なのか
+void spt::oh_Fnum(double angle,Vector3d direction){
 
-    vector<int> of;
-
-    for(int i=0;i<F.size();i++){
-        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])){ //オーバハング面だった場合
-            of.push_back(i); //面番号
+    for(int i=0;i<FG.size();i++){
+        if(overh(angle,direction,VG[FG[i](0)],VG[FG[i](1)],VG[FG[i](2)])){ //オーバハング面だった場合
+            oh_fn.push_back(i); //面番号
         }
     }
 
-    return of;
 }
 
 // オーバーハング点の番号を返す(グリッドセルの何番の点か⇒↓)
-vector<int> oh_Vnum(vector<Vector3d> gp,vector<Vector3d> V,vector<Vector3i> oh_F,double h,vector<Vector3d> Vv){
+vector<int> spt::oh_Vnum(vector<Vector3d> gp,double h){
     vector<int> ohv;
 
     for(int i=0;i<gp.size();i++){
-        if(point_in_out(gp[i],V,oh_F,h,Vv)) ohv.push_back(i); //オーバハング点だった場合
+        if(point_in_out(gp[i],h)) ohv.push_back(i); //オーバハング点だった場合
     }
 
     return ohv;
 }
 
 //  四隅の点の作成
-vector<Vector3d>  f_corners(Vector3d P,int Nc,vector<Vector3d> four){
+vector<Vector3d>  spt::f_corners(Vector3d P){
     double x_length=four[1](0)-four[0](0);
     double z_length=four[2](2)-four[0](2);
-    double ox=(x_length/Nc)/2;
-    double oz=(z_length/Nc)/2;
+    double ox=(x_length/N)/2;
+    double oz=(z_length/N)/2;
 
     vector<Vector3d> fc;
     fc.push_back({P(0)-ox,four[0](1),P(2)-oz});
@@ -160,7 +154,7 @@ vector<Vector3d>  f_corners(Vector3d P,int Nc,vector<Vector3d> four){
 }
 
 // 柱作成(柱の座標，柱の面,底面の頂点座標,柱の高さ,面番号始まりの点)
-void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double h,int ff){
+void spt::pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double h,int ff){
     for(int i=0;i<4;i++){
         pv.push_back(fc[i]);
     }
@@ -185,11 +179,11 @@ void pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double
 }
 
 // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f,vector<Vector3d> V,vector<Vector3i> F){
+void spt::L_support(double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f){
 
     int f_num=0;
     for(int i=0;i<ohp.size();i++){
-        vector<Vector3d> fc=f_corners(ohp[i],Nc,four); // 四隅の点を求める
+        vector<Vector3d> fc=f_corners(ohp[i]); // 四隅の点を求める
 
         vector<Vector3d> pv;
         vector<Vector3i> pf;
@@ -212,7 +206,7 @@ void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector
     igl::writeOBJ("support_L.obj",spv,spf);
     MatrixXd v;
     MatrixXi f;
-    vtom.vmat(V,F,v,f);
+    vtom.vmat(VG,FG,v,f);
     cout<<"元モデル変換\n";
     MatrixXd boolsupport_v;
     MatrixXi boolsupport_f;
@@ -222,10 +216,6 @@ void L_support(vector<Vector3d> ohp,vector<Vector3d> four,int Nc,double h,vector
     igl::writeOBJ("boolsupport.obj",boolsupport_v,boolsupport_f);
 }
 
-// サポート構築(Tree)
-vector<Vector3d> T_support(){
-
-}
 
 int main(int argc,char* argv[])
 {   
@@ -234,6 +224,7 @@ int main(int argc,char* argv[])
     vector<Vector3d> V;
     vector<Vector3i> F;
     ro reado;
+    spt sp;
 
     if(argc==1){
         cout<<"入力してください\n";
@@ -243,6 +234,8 @@ int main(int argc,char* argv[])
         fp=fopen(argv[1],"r");
     }
     reado.readPoint(V,F,fn);
+    sp.VG=V;
+    sp.FG=F;
     cout<<"読み込み完了\n";
     // for(int i=0;i<V.size();i++){
     //     cout<<V[i]<<endl;
@@ -252,26 +245,22 @@ int main(int argc,char* argv[])
     // }
 
     // x,y平面グリッドセルの作成
-    int N_cell=30;
-    vector<Vector3d> four;
-    vector<Vector3d> gc=grid_cell(V,N_cell,four);
+    sp.N=30; //グリッドの分割数
+    sp.aabb(); //最小包含
+    sp.grid_cell();
     cout<<"グリッドセルの作成完了\n";
     // obj_out(gc,"grid_cell.obj"); //obj出力
 
-    double y_min=100;
     double y_max=-100;
-    for(int i=0;i<V.size();i++){ //y座標最小値
-        if(y_min>V[i](1)){
-            y_min=V[i](1);
-        }
+    for(int i=0;i<V.size();i++){ //y座標最大
         if(y_max<V[i](1)){
             y_max=V[i](1);
         }
     }
 
     // 面のオーバハングを調べる
-    cout<<"面のオーバーハングを調べる"<<F.size()<<endl;
-    double angle=0.6108652381980153; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483
+    cout<<"面のオーバーハングを調べる"<<sp.FG.size()<<endl;
+    double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
     Vector3d direction(0,-1,0); //造形方向ベクトル
     vector<int> num; //その面がオーバーハングかどうか(1 or 0)
     for(int i=0;i<F.size();i++){
@@ -280,37 +269,36 @@ int main(int argc,char* argv[])
     }
 
     // オーバハング点の判定
-    vector<int> oF=oh_Fnum(angle,direction,V,F); // オーバーハング面の集合を作る
+    sp.oh_Fnum(angle,direction); // オーバーハング面の集合を作る
     // Vの射影
-    vector<Vector3d> Vs;
     for(int i=0;i<V.size();i++){
-        Vector3d vss={V[i](0),y_min,V[i](2)};
-        Vs.push_back(vss);
+        Vector3d vss={V[i](0),sp.four[0](1),V[i](2)};
+        sp.Vs.push_back(vss);
     }
-    vector<Vector3i> oh_F; //オーバハングだけの面
-    for(int i=0;i<oF.size();i++){
-        Vector3i ohf={F[oF[i]](0),F[oF[i]](1),F[oF[i]](2)};
-        oh_F.push_back(ohf);
+
+    for(int i=0;i<sp.oh_fn.size();i++){
+        Vector3i ohf={F[sp.oh_fn[i]](0),F[sp.oh_fn[i]](1),F[sp.oh_fn[i]](2)};
+        sp.oh_F.push_back(ohf);
     }
-    double h=y_max-y_min;
-    vector<int> oh_point=oh_Vnum(gc,Vs,oh_F,h,V); //オーバーハング点の点番号
+    double h=y_max-sp.four[0](1);
+    vector<int> oh_point=sp.oh_Vnum(sp.gc_V,h); //オーバーハング点の点番号
     
     // デバッグ
-    vector<Vector3d> ohp;
-    cout<<"gc="<<gc.size()<<" ohp="<<oh_point.size()<<endl;
+    cout<<"gc="<<sp.gc_V.size()<<" ohp="<<oh_point.size()<<endl;
     for(int i=0;i<oh_point.size();i++){
-        Vector3d op=gc[oh_point[i]];
-        ohp.push_back(op);
+        Vector3d op=sp.gc_V[oh_point[i]];
+        sp.ohp.push_back(op);
     }
+    cout<<"ohpsize="<<sp.ohp.size()<<endl;
 
-    obj_out(ohp,"oh_point.obj");
+    sp.obj_out(sp.ohp,"oh_point.obj");
 
-    vector<Vector3d> sv;
-    vector<Vector3i> sf;
+    vector<Vector3d> sv; //サポート点情報
+    vector<Vector3i> sf; //サポート面情報
     cout<<"h="<<h<<endl;
-    L_support(ohp,four,N_cell,h,sv,sf,V,F);
+    sp.L_support(h,sv,sf);
     cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
-    obj_outf(sv,sf,"support_L.obj");
+    sp.obj_outf(sv,sf,"support_L.obj");
 
     // // vtk出力，結果の可視化
     // FILE* fpv;
