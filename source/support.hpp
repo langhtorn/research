@@ -18,6 +18,7 @@ class spt{
     std::vector<int> oh_fn; //オーバーハング点の面番号
     std::vector<Eigen::Vector3i> oh_F; //オーバーハングだけの面
     std::vector<Eigen::Vector3d> ohp; //オーバーハング点の座標情報
+    std::vector<double> height; //各オーバーハング点の高さ
     std::vector<Eigen::Vector3d> four; //モデルのmin.max
 
     // 最小包含立体
@@ -30,6 +31,9 @@ class spt{
     void obj_out(std::vector<Eigen::Vector3d> vert,const char* file_name);
 
     void obj_outf(std::vector<Eigen::Vector3d> V,std::vector<Eigen::Vector3i> F,const char* file_name);
+
+    // それぞれの柱の高さを設定
+    void l_height();
 
     // オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
     bool point_in_out(Eigen::Vector3d P,double h);
@@ -47,6 +51,6 @@ class spt{
     void pillar(std::vector<Eigen::Vector3d> &pv,std::vector<Eigen::Vector3i> &pf,std::vector<Eigen::Vector3d> fc,double h,int ff);
 
     // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-    void L_support(double h,std::vector<Eigen::Vector3d> &support_v,std::vector<Eigen::Vector3i> &support_f);
+    void L_support(std::vector<Eigen::Vector3d> &support_v,std::vector<Eigen::Vector3i> &support_f);
 
 };

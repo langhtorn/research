@@ -84,6 +84,47 @@ void spt::obj_outf(vector<Vector3d> V,vector<Vector3i> F,const char* file_name){
     }
 }
 
+// それぞれの柱の高さを設定
+void spt::l_height(){
+    vector<vector<double>> rays_structure(ohp.size()); // オーバーハング線と交わわるy座標の値
+    for(int j=0;j<ohp.size();j++){
+        for(int i=0;i<FG.size();i++){
+        
+            // 内外判定
+            Vector3d BA=Vs[FG[i](0)]-Vs[FG[i](1)];
+            Vector3d BP=ohp[j]-Vs[FG[i](1)];
+            Vector3d BC=Vs[FG[i](2)]-Vs[FG[i](1)];
+            Vector3d CP=ohp[j]-Vs[FG[i](2)];
+            Vector3d CA=Vs[FG[i](0)]-Vs[FG[i](2)];
+
+
+            Vector3d cross_a=BP.cross(BA);
+            // cout<<"BP*BA={"<<cross_a<<"}"<<endl;
+            Vector3d cross_c=BC.cross(BP);
+            // cout<<"BC*BP={"<<cross_c<<"}"<<endl;
+            Vector3d cross_b=CA.cross(CP);
+            // cout<<"CA*CP={"<<cross_b<<"}"<<endl;
+            if((cross_a(1)>=0 && cross_b(1)>=0 && cross_c(1)>=0) || (cross_a(1)<=0 && cross_b(1)<=0 && cross_c(1)<=0)){ //内側
+            double min=100;
+                for(int k=0;k<3;k++){
+                    if(VG[FG[i](k)](1)<min){
+                        min=VG[FG[i](k)](1);
+                    }
+                }
+                rays_structure[j].push_back(min); //oh線と交わった面のy座標
+                // cout<<"FG="<<i<<endl;
+                // cout<<"ohp="<<ohp[j]<<endl;
+                // cout<<"座標:{"<<Vs[FG[i](0)]<<"}\n{"<<Vs[FG[i](1)]<<"}\n{"<<Vs[FG[i](2)]<<"\n"<<endl;
+            }
+        }
+        sort(rays_structure[j].rbegin(),rays_structure[j].rend());
+        // for(int i=0;i<rays_structure[j].size();i++){
+        //     cout<<"rs="<<rays_structure[j][i]<<endl;
+        // }
+        height.push_back(rays_structure[j][0]);
+    }
+}
+
 // オーバーハング点の判定(入力：グリッドセルの点，座標情報，オーバハング面の構成)
 bool spt::point_in_out(Vector3d P,double h){
     for(int i=0;i<oh_fn.size();i++){
@@ -155,12 +196,13 @@ vector<Vector3d>  spt::f_corners(Vector3d P){
 
 // 柱作成(柱の座標，柱の面,底面の頂点座標,柱の高さ,面番号始まりの点)
 void spt::pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,double h,int ff){
+
     for(int i=0;i<4;i++){
         pv.push_back(fc[i]);
     }
 
     for(int i=0;i<4;i++){
-        pv.push_back({fc[i](0),fc[i](1)+h,fc[i](2)});
+        pv.push_back({fc[i](0),h,fc[i](2)});
     }
 
     pf.push_back({ff,ff+3,ff+2});
@@ -179,15 +221,17 @@ void spt::pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,d
 }
 
 // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-void spt::L_support(double h,vector<Vector3d> &support_v,vector<Vector3i> &support_f){
+void spt::L_support(vector<Vector3d> &support_v,vector<Vector3i> &support_f){
 
     int f_num=0;
+    
     for(int i=0;i<ohp.size();i++){
         vector<Vector3d> fc=f_corners(ohp[i]); // 四隅の点を求める
 
         vector<Vector3d> pv;
         vector<Vector3i> pf;
-        pillar(pv,pf,fc,h,f_num);
+        // cout<<"height="<<height[i]<<endl;
+        pillar(pv,pf,fc,height[i],f_num);
         // サポートの配列に一本のサポート柱の情報を入れる
         support_v.insert(support_v.end(),pv.begin(),pv.end());
         support_f.insert(support_f.end(),pf.begin(),pf.end());
@@ -295,8 +339,9 @@ int main(int argc,char* argv[])
 
     vector<Vector3d> sv; //サポート点情報
     vector<Vector3i> sf; //サポート面情報
+    sp.l_height();
     cout<<"h="<<h<<endl;
-    sp.L_support(h,sv,sf);
+    sp.L_support(sv,sf);
     cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
     sp.obj_outf(sv,sf,"support_L.obj");
 

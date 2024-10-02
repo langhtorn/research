@@ -1,0 +1,8 @@
+:::mermaid
+graph TD;
+  First(Check result request body)-->B{Check result is};
+  B-->|OK| C(Continue Process)
+  C-->|NG| D(End)
+  F[(databese)]
+  B -.-|refernce|F
+:::
