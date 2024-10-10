@@ -18,8 +18,12 @@ class spt{
     std::vector<int> oh_fn; //オーバーハング点の面番号
     std::vector<Eigen::Vector3i> oh_F; //オーバーハングだけの面
     std::vector<Eigen::Vector3d> ohp; //オーバーハング点の座標情報
+    std::vector<int> ohvn; //オーバーハング点の番号
+    std::vector<std::vector<Eigen::Vector3d>> rays_s; //モデルとrays_structureの交点座標
     std::vector<double> height; //各オーバーハング点の高さ
     std::vector<Eigen::Vector3d> four; //モデルのmin.max
+    Eigen::MatrixXd b_v;
+    Eigen::MatrixXi b_f;
 
     // 最小包含立体
     void aabb();
