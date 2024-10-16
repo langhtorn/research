@@ -20,10 +20,16 @@ using namespace Eigen;
 
 // 削除できるサポートを探す
 void judge::delete_suppport(){
-    for(int i=0;i<sp.ohvn.size();i++){
-        for(int j=0;j<sp.rays_s[i].size();j++){
-            // はじめの直線は造形方向で
+    for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
+        // 一本分のサポートを作る
+        MatrixXd S_V;
+        MatrixXi S_F;
+        for(int j=0;j<sp.rays_s[i].size();j++){ //始点を決める
+            // 道具ボクセルの作成
             
+            // ミンコフスキー和を求める
+
+            // モデルと道具可動域との交差判定
         }
     }
 }

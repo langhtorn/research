@@ -22,6 +22,8 @@ class spt{
     std::vector<std::vector<Eigen::Vector3d>> rays_s; //モデルとrays_structureの交点座標
     std::vector<double> height; //各オーバーハング点の高さ
     std::vector<Eigen::Vector3d> four; //モデルのmin.max
+    Eigen::MatrixXd VG_Mver; //iglで使えるようにモデルの点座標のMatrixバージョンも作っておく
+    Eigen::MatrixXi FG_Mver; //モデルの面座標のMatrixバージョン
     Eigen::MatrixXd b_v;
     Eigen::MatrixXi b_f;
 
