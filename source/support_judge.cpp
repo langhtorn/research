@@ -21,15 +21,14 @@ using namespace Eigen;
 // 削除できるサポートを探す
 void judge::delete_suppport(){
     for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
-        // 一本分のサポートを作る
-        MatrixXd S_V;
-        MatrixXi S_F;
+
         for(int j=0;j<sp.rays_s[i].size();j++){ //始点を決める
             // 道具ボクセルの作成
             
-            // ミンコフスキー和を求める
-
-            // モデルと道具可動域との交差判定
+            Vector3d direction(0,-1,0); // 初期方向ベクトルは造形方向下向きで
+            Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
+            
+            
         }
     }
 }
@@ -114,7 +113,7 @@ int main(int argc,char* argv[])
     vector<Vector3i> sf; //サポート面情報
     sp.l_height();
     cout<<"h="<<h<<endl;
-    sp.L_support(sv,sf);
+    sp.L_support();
     cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
     sp.obj_outf(sv,sf,"support_L.obj");
 
