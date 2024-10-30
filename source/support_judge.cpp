@@ -18,6 +18,27 @@
 using namespace std;
 using namespace Eigen;
 
+// 球面サンプリング
+vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3d r,int samples){
+    vector<Vector3d> sample_p;
+    double ts=M_PI/samples; //θの間隔
+    double ps=M_PI/samples; //φの間隔
+
+    for(int i=0;i<samples;i++){
+        double theta=i*ts;
+        for(int j=0;j<samples;j++){
+            double phi=j*ps;
+            Vector3d sp;
+            sp<<r*sin(theta)*cos(phi),r*sin(theta)*sin(phi),r*cos(theta);
+
+            // サンプリング点を方向ベクトルに移動
+            Vector3d sd=direction*r+sp;
+            sample_p.push_back(p0+sd);
+        }
+    }
+    return sample_p;
+}
+
 // 削除できるサポートを探す
 void judge::delete_suppport(){
     for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
@@ -27,7 +48,7 @@ void judge::delete_suppport(){
             
             Vector3d direction(0,-1,0); // 初期方向ベクトルは造形方向下向きで
             Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
-            
+
             direction.normalize(); //正規化して単位ベクトルにする
             Vector3d v0=direction.unitOrthogonal();
             Vector3d v1=direction.cross(v0);
