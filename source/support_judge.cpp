@@ -28,7 +28,16 @@ void judge::delete_suppport(){
             Vector3d direction(0,-1,0); // 初期方向ベクトルは造形方向下向きで
             Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
             
-            
+            direction.normalize(); //正規化して単位ベクトルにする
+            Vector3d v0=direction.unitOrthogonal();
+            Vector3d v1=direction.cross(v0);
+
+            // 周囲の4点求める
+            double scale=1; //中心点からの距離
+            Vector3d p1=centerpoint+scale*v0+scale*v1;
+            Vector3d p2=centerpoint+scale*v0-scale*v1;
+            Vector3d p3=centerpoint-scale*v0+scale*v1;
+            Vector3d p4=centerpoint-scale*v0-scale*v1;
         }
     }
 }
