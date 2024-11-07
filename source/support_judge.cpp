@@ -14,6 +14,7 @@
 #include<igl/writeOBJ.h>
 #include "support.hpp"
 #include "support_judge.hpp"
+#include<igl/AABB.h>
 
 using namespace std;
 using namespace Eigen;
@@ -39,6 +40,22 @@ vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3
     return sample_p;
 }
 
+// 中心点から周囲の１点を求める(中心点と正規化された方向ベクトル)
+vector<Vector3d> four_point(Vector3d centerpoint,Vector3d direction){
+
+    Vector3d v0=direction.unitOrthogonal();
+    Vector3d v1=direction.cross(v0);
+
+    // 周囲の4点求める
+    double scale=1; //中心点からの距離
+    Vector3d p1=centerpoint+scale*v0+scale*v1;
+    Vector3d p2=centerpoint+scale*v0-scale*v1;
+    Vector3d p3=centerpoint-scale*v0+scale*v1;
+    Vector3d p4=centerpoint-scale*v0-scale*v1;
+    
+    return {p1,p2,p3,p4};
+}
+
 // 削除できるサポートを探す
 void judge::delete_suppport(){
     for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
@@ -50,15 +67,14 @@ void judge::delete_suppport(){
             Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
 
             direction.normalize(); //正規化して単位ベクトルにする
-            Vector3d v0=direction.unitOrthogonal();
-            Vector3d v1=direction.cross(v0);
+            
+            vector<Vector3d> toolpoints; //ツールの頂点座標
+            vector<Vector3i> toolface; //ツールの面座標
 
-            // 周囲の4点求める
-            double scale=1; //中心点からの距離
-            Vector3d p1=centerpoint+scale*v0+scale*v1;
-            Vector3d p2=centerpoint+scale*v0-scale*v1;
-            Vector3d p3=centerpoint-scale*v0+scale*v1;
-            Vector3d p4=centerpoint-scale*v0-scale*v1;
+            toolpoints=four_point(centerpoint,direction); //周囲の4点を求める
+
+            igl::AABB<MatrixXd,3> aabb_tree; //元モデルのAABBツリー
+            aabb_tree.init(sp.VG_Mver,sp.FG_Mver); //AABBツリー構築
         }
     }
 }
