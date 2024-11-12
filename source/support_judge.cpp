@@ -40,6 +40,25 @@ vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3
     return sample_p;
 }
 
+// モデルAABBツリーと三角形メッシュとの交差判定
+bool intersect_triangle(igl::AABB<MatrixXd,3>& aabb_tree,Vector3d& v0,Vector3d& v1,Vector3d& v2){
+
+    // AABBの境界ボックスに三角形メッシュが交差していない
+    if(!intersect_triangle(v0,v1,v2)){
+        return false;
+    }
+
+    // 左右のノードがある
+    if(aabb_tree.m_left && aabb_tree.m_right){
+        return intersect_triangle(*aabb_tree.m_left,v0,v1,v2) || intersect_triangle(*aabb_tree.m_right,v0,v1,v2);
+    }
+
+    // 葉ノードに到達した場合，その中のメッシュとの交差判定をする
+    // m_primitiveでノードに入ってるメッシュの番号が分かる
+    if()
+
+}
+
 // 中心点から周囲の１点を求める(中心点と正規化された方向ベクトル)
 vector<Vector3d> four_point(Vector3d centerpoint,Vector3d direction){
 
