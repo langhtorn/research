@@ -14,7 +14,7 @@
 #include<igl/writeOBJ.h>
 #include "support.hpp"
 #include "support_judge.hpp"
-#include<igl/AABB.h>
+#include<igl/copyleft/cgal/intersect_other.h>
 
 using namespace std;
 using namespace Eigen;
@@ -41,38 +41,40 @@ vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3
 }
 
 // モデルAABBツリーと三角形メッシュとの交差判定
-bool intersect_triangle(igl::AABB<MatrixXd,3>& aabb_tree,Vector3d& v0,Vector3d& v1,Vector3d& v2){
+bool judge::intersect_triangle(MatrixXd TV,MatrixXi TF){
 
-    // AABBの境界ボックスに三角形メッシュが交差していない
-    if(!intersect_triangle(v0,v1,v2)){
-        return false;
-    }
+    MatrixXi IF; // 交差する三角形のペアが格納される
 
-    // 左右のノードがある
-    if(aabb_tree.m_left && aabb_tree.m_right){
-        return intersect_triangle(*aabb_tree.m_left,v0,v1,v2) || intersect_triangle(*aabb_tree.m_right,v0,v1,v2);
-    }
+    bool intersects=igl::copyleft::cgal::intersect_other(sp.VG_Mver,sp.FG_Mver,TV,TF,IF);
 
-    // 葉ノードに到達した場合，その中のメッシュとの交差判定をする
-    // m_primitiveでノードに入ってるメッシュの番号が分かる
-    if()
+    if(intersects) return true;
+    else return false;
 
 }
 
 // 中心点から周囲の１点を求める(中心点と正規化された方向ベクトル)
-vector<Vector3d> four_point(Vector3d centerpoint,Vector3d direction){
+MatrixXd judge::four_point(Vector3d centerpoint,Vector3d direction){
 
+    MatrixXd fp(1,3);
     Vector3d v0=direction.unitOrthogonal();
     Vector3d v1=direction.cross(v0);
+    vector<Vector3d> p;
 
     // 周囲の4点求める
     double scale=1; //中心点からの距離
-    Vector3d p1=centerpoint+scale*v0+scale*v1;
-    Vector3d p2=centerpoint+scale*v0-scale*v1;
-    Vector3d p3=centerpoint-scale*v0+scale*v1;
-    Vector3d p4=centerpoint-scale*v0-scale*v1;
+    p.push_back(centerpoint+scale*v0+scale*v1);
+    p.push_back(centerpoint+scale*v0-scale*v1);
+    p.push_back(centerpoint-scale*v0+scale*v1);
+    p.push_back(centerpoint-scale*v0-scale*v1);
+
+    fp.row(0)=p[0].transpose();
+
+    for(int i=1;i<4;i++){
+        fp.conservativeResize(fp.rows()+1,fp.cols());
+        fp.row(fp.rows()-1)=p[i].transpose();
+    }
     
-    return {p1,p2,p3,p4};
+    return fp;
 }
 
 // 削除できるサポートを探す
@@ -87,13 +89,15 @@ void judge::delete_suppport(){
 
             direction.normalize(); //正規化して単位ベクトルにする
             
-            vector<Vector3d> toolpoints; //ツールの頂点座標
-            vector<Vector3i> toolface; //ツールの面座標
+            MatrixXd toolpoints; //ツールの頂点座標
+            MatrixXi toolface; //ツールの面座標
 
             toolpoints=four_point(centerpoint,direction); //周囲の4点を求める
 
-            igl::AABB<MatrixXd,3> aabb_tree; //元モデルのAABBツリー
-            aabb_tree.init(sp.VG_Mver,sp.FG_Mver); //AABBツリー構築
+            double L=1; //ツールの長さ
+            centerpoint=centerpoint+L*direction; // ツールボクセルの反対側
+
+            bool intersects=intersect_triangle(toolpoints,toolface); //交差判定 trueが交差してる
         }
     }
 }
