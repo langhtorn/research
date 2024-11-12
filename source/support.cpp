@@ -226,7 +226,7 @@ void spt::pillar(vector<Vector3d> &pv,vector<Vector3i> &pf,vector<Vector3d> fc,d
 }
 
 // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-void spt::L_support(vector<Vector3d> &support_v,vector<Vector3i> &support_f){
+void spt::L_support(){
 
     int f_num=0;
     

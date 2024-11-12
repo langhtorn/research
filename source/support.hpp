@@ -23,7 +23,9 @@ class spt{
     std::vector<double> height; //各オーバーハング点の高さ
     std::vector<Eigen::Vector3d> four; //モデルのmin.max
     Eigen::MatrixXd VG_Mver; //iglで使えるようにモデルの点座標のMatrixバージョンも作っておく
-    Eigen::MatrixXi FG_Mver; //モデルの面座標のMatrixバージョン
+    Eigen::MatrixXi FG_Mver; //モデルの面リストのMatrixバージョン
+    Eigen::MatrixXd SV; //サポート頂点Matrixバージョン
+    Eigen::MatrixXi SF; //サポート面リストMatrixバージョン
     Eigen::MatrixXd b_v;
     Eigen::MatrixXi b_f;
 
@@ -57,6 +59,6 @@ class spt{
     void pillar(std::vector<Eigen::Vector3d> &pv,std::vector<Eigen::Vector3i> &pf,std::vector<Eigen::Vector3d> fc,double h,int ff);
 
     // サポート構築(Lattice) 入力：オーバーハング点，AABBの底面，セルの分割数，柱の高さ，求めたいサポートの点と面
-    void L_support(std::vector<Eigen::Vector3d> &support_v,std::vector<Eigen::Vector3i> &support_f);
+    void L_support();
 
 };
