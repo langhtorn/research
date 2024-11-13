@@ -1,3 +1,5 @@
+#pragma once
+
 #include<iostream>
 #include<vector>
 #include<Eigen/Core>
@@ -24,10 +26,12 @@ class spt{
     std::vector<Eigen::Vector3d> four; //モデルのmin.max
     Eigen::MatrixXd VG_Mver; //iglで使えるようにモデルの点座標のMatrixバージョンも作っておく
     Eigen::MatrixXi FG_Mver; //モデルの面リストのMatrixバージョン
+    std::vector<Eigen::Vector3d> support_v; //サポート頂点
+    std::vector<Eigen::Vector3i> support_f; //サポート面
     Eigen::MatrixXd SV; //サポート頂点Matrixバージョン
     Eigen::MatrixXi SF; //サポート面リストMatrixバージョン
-    Eigen::MatrixXd b_v;
-    Eigen::MatrixXi b_f;
+    Eigen::MatrixXd b_v; //ブーリアン演算後のサポート点座標
+    Eigen::MatrixXi b_f; //ブーリアン演算後のサポート面
 
     // 最小包含立体
     void aabb();
