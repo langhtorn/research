@@ -8,7 +8,7 @@
 using namespace std;
 using namespace Eigen;
 
-void vt::vmat(std::vector<Eigen::Vector3d> A,std::vector<Eigen::Vector3i> B,Eigen::Matrix3d &AA,Eigen::Matrix3i &BB)
+void vt::vmat(std::vector<Eigen::Vector3d> A,std::vector<Eigen::Vector3i> B,Eigen::MatrixXd &AA,Eigen::MatrixXi &BB)
 {
     MatrixXd ad(A.size(),3);
     MatrixXi bd(B.size(),3);
