@@ -19,33 +19,34 @@
 using namespace std;
 using namespace Eigen;
 
-// 球面サンプリング
-vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3d r,int samples){
-    vector<Vector3d> sample_p;
-    double ts=M_PI/samples; //θの間隔
-    double ps=M_PI/samples; //φの間隔
+// // 球面サンプリング
+// vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3d r,int samples){
+//     vector<Vector3d> sample_p;
+//     double ts=M_PI/samples; //θの間隔
+//     double ps=M_PI/samples; //φの間隔
 
-    for(int i=0;i<samples;i++){
-        double theta=i*ts;
-        for(int j=0;j<samples;j++){
-            double phi=j*ps;
-            Vector3d sp;
-            sp<<r*sin(theta)*cos(phi),r*sin(theta)*sin(phi),r*cos(theta);
+//     for(int i=0;i<samples;i++){
+//         double theta=i*ts;
+//         for(int j=0;j<samples;j++){
+//             double phi=j*ps;
+//             Vector3d sp;
+//             sp<<r*sin(theta)*cos(phi),r*sin(theta)*sin(phi),r*cos(theta);
 
-            // サンプリング点を方向ベクトルに移動
-            Vector3d sd=direction*r+sp;
-            sample_p.push_back(p0+sd);
-        }
-    }
-    return sample_p;
-}
+//             // サンプリング点を方向ベクトルに移動
+//             Vector3d sd=direction*r+sp;
+//             sample_p.push_back(p0+sd);
+//         }
+//     }
+//     return sample_p;
+// }
 
 // モデルAABBツリーと三角形メッシュとの交差判定
 bool judge::intersect_triangle(MatrixXd TV,MatrixXi TF){
 
     MatrixXi IF; // 交差する三角形のペアが格納される
+    bool kari=true;
 
-    bool intersects=igl::copyleft::cgal::intersect_other(sp.VG_Mver,sp.FG_Mver,TV,TF,IF);
+    bool intersects=igl::copyleft::cgal::intersect_other(sp.VG_Mver,sp.FG_Mver,TV,TF,kari,IF);
 
     if(intersects) return true;
     else return false;
@@ -92,10 +93,15 @@ void judge::delete_suppport(){
             MatrixXd toolpoints; //ツールの頂点座標
             MatrixXi toolface; //ツールの面座標
 
-            toolpoints=four_point(centerpoint,direction); //周囲の4点を求める
+            MatrixXd tp1=four_point(centerpoint,direction); //周囲の4点を求める
 
             double L=1; //ツールの長さ
             centerpoint=centerpoint+L*direction; // ツールボクセルの反対側
+
+            MatrixXd tp2=four_point(centerpoint,-direction); //下の周囲の4点
+            toolpoints(tp1.rows()+tp2.rows(),tp1.cols());
+            toolpoints<<tp1,
+                        tp2;
 
             bool intersects=intersect_triangle(toolpoints,toolface); //交差判定 trueが交差してる
         }
