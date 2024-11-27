@@ -7,6 +7,8 @@
 #include<iostream>
 #include<fstream>
 #include<string>
+#include<igl/signed_distance.h>
+#include<igl/readOBJ.h>
 
 using namespace Eigen;
 using namespace std;
@@ -17,6 +19,8 @@ struct Model{
     double r;
     vector<Vector3d> newV;
     vector<Vector3i> newF;
+    MatrixXd GV;
+    MatrixXi GF;
 
     // 辺の中点を計算する&球面上に配置
     Vector3d findMindpoint(Vector3d A,Vector3d B){
@@ -27,6 +31,8 @@ struct Model{
     // サブディビジョンする 引数：サブディビジョン回数
     void subdivide(int n){
         for(int j=0;j<n;j++){
+            newV.clear();
+            newF.clear();
             for(int i=0;i<F.size();i++){
                 // cout<<i<<endl;
                 int v1=F[i](0);
@@ -53,6 +59,31 @@ struct Model{
             }
             F=newF;
             V=newV;
+        }
+        MatrixXd nv(V.size(),3);
+        for(int i=0;i<V.size();i++){
+            nv.row(i)=V[i];
+        } 
+        MatrixXd GV_3D(GV.rows(), 3); // 3次元座標行列として再定義
+        for (int i = 0; i < GV.rows(); i++) {
+            GV_3D(i, 0) = GV(i, 0);
+            GV_3D(i, 1) = GV(i, 1);
+            GV_3D(i, 2) = GV(i, 2);
+        }
+        MatrixXi GF_3D(GF.rows(), 3); // 3つの頂点を持つ面行列として再定義
+        for (int i = 0; i < GF.rows(); i++) {
+            GF_3D(i, 0) = GF(i, 0);
+            GF_3D(i, 1) = GF(i, 1);
+            GF_3D(i, 2) = GF(i, 2);
+        }
+        // 内外判定して削除する
+        VectorXd S; //符号付距離
+        VectorXi I; //最近接面のインデックス
+        MatrixXd C; //最近接点
+        VectorXd N; //法線方向
+        igl::signed_distance(nv,GV_3D,GF_3D,igl::SignedDistanceType::SIGNED_DISTANCE_TYPE_DEFAULT,S,I,C,N);
+        for(int i=0;i<V.size();i++){
+            if(S[i]<0) newF.erase(newF.begin()+i);
         }   
     }
 
@@ -139,6 +170,8 @@ int main()
     G.F=generate_icosahedron_faces();
     G.newV=G.V;
     G.newF=G.F;
+
+    igl::readOBJ("kitten_5508.obj",G.GV,G.GF);
 
     // FILE* f;
     // f=fopen("icosahedron.obj","w");
