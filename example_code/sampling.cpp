@@ -96,7 +96,7 @@ struct tool{
         vector<Vector3d> p;
 
         // 周囲の4点求める
-        double scale=0.1; //中心点からの距離 横幅
+        double scale=0.05; //中心点からの距離 横幅
         p.push_back(centerpoint+scale*v0+scale*v1);
         p.push_back(centerpoint+scale*v0-scale*v1);
         p.push_back(centerpoint-scale*v0-scale*v1);
@@ -152,7 +152,7 @@ int main()
     // }
     // fclose(f);
 
-    G.subdivide(1);
+    G.subdivide(2);
 
     FILE* f;
     f=fopen("icosahedron.obj","w");

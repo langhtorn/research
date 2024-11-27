@@ -19,26 +19,74 @@
 using namespace std;
 using namespace Eigen;
 
-// // 球面サンプリング
-// vector<Vector3d> judge::SphericalSampling(Vector3d p0,Vector3d direction,Vector3d r,int samples){
-//     vector<Vector3d> sample_p;
-//     double ts=M_PI/samples; //θの間隔
-//     double ps=M_PI/samples; //φの間隔
+// 球面サンプリング
+// 辺の中点を計算する関数
+Vector3d judge::findMidpoint(Vector3d A,Vector3d B){
+    Vector3d midpoint=(A+B)/2.0;
+    return midpoint.normalized()*r;
+}
 
-//     for(int i=0;i<samples;i++){
-//         double theta=i*ts;
-//         for(int j=0;j<samples;j++){
-//             double phi=j*ps;
-//             Vector3d sp;
-//             sp<<r*sin(theta)*cos(phi),r*sin(theta)*sin(phi),r*cos(theta);
+// 正二十面体の初期解
+std::vector<Eigen::Vector3i> generate_icosahedron_faces() {
+    return {
+        { 0, 11, 5 }, { 0, 5, 1 }, { 0, 1, 7 }, { 0, 7, 10 }, { 0, 10, 11 },
+        { 1, 5, 9 }, { 5, 11, 4 }, { 11, 10, 2 }, { 10, 7, 6 }, { 7, 1, 8 },
+        { 3, 9, 4 }, { 3, 4, 2 }, { 3, 2, 6 }, { 3, 6, 8 }, { 3, 8, 9 },
+        { 4, 9, 5 }, { 2, 4, 11 }, { 6, 2, 10 }, { 8, 6, 7 }, { 9, 8, 1 }
+    };
+}
 
-//             // サンプリング点を方向ベクトルに移動
-//             Vector3d sd=direction*r+sp;
-//             sample_p.push_back(p0+sd);
-//         }
-//     }
-//     return sample_p;
-// }
+std::vector<Eigen::Vector3d> generate_icosahedron_vertices(const Eigen::Vector3d& center_point) {
+    std::vector<Eigen::Vector3d> vertices;
+    double phi = (1.0 + std::sqrt(5.0)) / 2.0;
+
+    std::vector<Eigen::Vector3d> unit_vertices = {
+        { -1,  phi,  0 }, {  1,  phi,  0 }, { -1, -phi,  0 }, {  1, -phi,  0 },
+        {  0, -1,  phi }, {  0,  1,  phi }, {  0, -1, -phi }, {  0,  1, -phi },
+        {  phi,  0, -1 }, {  phi,  0,  1 }, { -phi,  0, -1 }, { -phi,  0,  1 }
+    };
+
+    for (const auto& v : unit_vertices) {
+        vertices.push_back(center_point + (v.normalized() * r));
+    }
+
+    return vertices;
+}
+
+
+// サブディビジョンする関数
+void judge::subdivide(int n,Vector3d centerpoint){
+    samplingV=generate_icosahedron_vertices();
+    samplingF=generate_icosahedron_faces();
+    vector<Vector3d> newV;
+    vector<Vector3i> newF;
+    for(int j=0;j<n;j++){
+        for(int i=0;i<samplingF.size();i++){
+            int v1=F[i](0);
+            int v2=F[i](1);
+            int v3=F[i](2);
+
+            // 中点の計算
+            Vector3d m12v=findMidpoint(V[v1],V[v2]);
+            Vector3d m23v=findMindpoint(V[v2],V[v3]);
+            Vector3d m31v=findMindpoint(V[v3],V[v1]);
+            int m12=newV.size(); // 新しい頂点インデックス
+            newV.push_back(m12v);
+            int m23=newV.size();
+            newV.push_back(m23v);
+            int m31=newV.size();
+            newV.push_back(m31v);
+
+            // 新しい三角形を生成
+            newF.push_back({v1,m12,m31});
+            newF.push_back({v2,m23,m12});
+            newF.push_back({v3,m31,m23});
+            newF.push_back({m12,m23,m31});
+        }
+        F=newF;
+        V=newV;
+    }
+}
 
 // モデルAABBツリーと三角形メッシュとの交差判定
 bool judge::intersect_triangle(MatrixXd TV,MatrixXi TF){
