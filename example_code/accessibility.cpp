@@ -427,7 +427,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // visualizeMeshToObj(G.MV,G.MF,"motomesh.obj");
         // 1.境界球の表面を，球面三角形に分割する
-        make_SphericalTriangles(4);
+        make_SphericalTriangles(3);
 
         visualizeSphericalTrianglesToObj(S,"sphericaltriangle.obj");
 
@@ -740,6 +740,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     }
     // R-treeの構築
     void buildRTree(){
+        int vnum=0;
         for(size_t i=0;i<S.size();i++){
             const auto& vertex=S[i];
 
@@ -752,7 +753,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 double phi=atan2(vertex_i.y(),vertex_i.x()); // 緯度Φ
 
                 // R-treeに(Point2D,元のインデックス)を挿入
-                rtree.insert(make_pair(Point2D(theta,phi),i));
+                rtree.insert(make_pair(Point2D(theta,phi),vnum));
+                vnum++;
             }
 
         }
@@ -780,13 +782,15 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         vector<int> result_indices;
 
         if(R.phi_min<=R.phi_max){
+            cout<<"通常\n";
             // 通常ケースΦmin<=Φmax
             auto indices=queryVerticesInRectangle(R);
             result_indices.insert(result_indices.end(),indices.begin(),indices.end());
         }else{
             // Φmin>Φmaxの場合，二つの範囲に分割
-            Rectangle R1={R.theta_min,R.theta_max,R.phi_min,2*M_PI}; // θmin~2π
-            Rectangle R2={R.theta_min,R.theta_max,0,R.phi_max}; //0~Φmax
+            cout<<"分割\n";
+            Rectangle R1={R.theta_min,R.theta_max,0,R.phi_max}; // θmin~2π
+            Rectangle R2={R.theta_min,R.theta_max,R.phi_min+2*M_PI,2*M_PI}; //0~Φmax
 
             auto indices1=queryVerticesInRectangle(R1);
             auto indices2=queryVerticesInRectangle(R2);
@@ -926,11 +930,25 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 // 2. 球面矩形R0を拡張して，候補パッチRを生成する
                 Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
                 if(numiI==100) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
-                cout<<"候補パッチRの作成\n";
+                cout<<"候補パッチR"<<i<<" の作成\n";
 
 
                 // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
                 vector<int> VR=queryVerticesWithWrap(extendedRectangle);
+                cout<<"VRsize="<<VR.size()<<endl;
+                if(numiI==100){
+                    // 頂点座標の取得
+                    vector<Vector3d> VR_vert;
+                    for(const auto& index : VR){
+                        int index_i=index/3;
+                        int index_j=index%3;
+
+                        VR_vert.push_back(S[index_i].row(index_j));
+                    }
+
+                    vector<Vector3i> fa;
+                    visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
+                }
 
                 // 4.球面上の候補頂点および候補三角形に対して，占有テストを行う
                 // 各面Fiのアクセス不可能領域に基づく領域を取得
