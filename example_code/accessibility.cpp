@@ -691,6 +691,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // 4.通常ケース　単一の矩形を生成
         if(!north_included && !south_included && !phi_split){
+            if(phi_min<0) phi_min+=2*M_PI;
+            if(phi_max<0) phi_max+=2*M_PI;
             rectangles.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max});
         }
 
@@ -752,6 +754,9 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 double theta=acos(vertex_i.z()/sphere_r); // 緯度θ
                 double phi=atan2(vertex_i.y(),vertex_i.x()); // 緯度Φ
 
+                // Φを[0,2π]の範囲に変換
+                if(phi<0) phi+=2*M_PI;
+
                 // R-treeに(Point2D,元のインデックス)を挿入
                 rtree.insert(make_pair(Point2D(theta,phi),vnum));
                 vnum++;
@@ -781,16 +786,11 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     vector<int> queryVerticesWithWrap(const Rectangle& R){
         vector<int> result_indices;
 
-        if(R.phi_min<=R.phi_max){
-            cout<<"通常\n";
-            // 通常ケースΦmin<=Φmax
-            auto indices=queryVerticesInRectangle(R);
-            result_indices.insert(result_indices.end(),indices.begin(),indices.end());
-        }else{
+        if(R.phi_min<0 && R.phi_max>0){
             // Φmin>Φmaxの場合，二つの範囲に分割
-            cout<<"分割\n";
+            // cout<<"分割\n";
             Rectangle R1={R.theta_min,R.theta_max,0,R.phi_max}; // θmin~2π
-            Rectangle R2={R.theta_min,R.theta_max,R.phi_min+2*M_PI,2*M_PI}; //0~Φmax
+            Rectangle R2={R.theta_min,R.theta_max,R.phi_min,2*M_PI}; //0~Φmax
 
             auto indices1=queryVerticesInRectangle(R1);
             auto indices2=queryVerticesInRectangle(R2);
@@ -798,6 +798,12 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             // 結果を結合
             result_indices.insert(result_indices.end(),indices1.begin(),indices1.end());
             result_indices.insert(result_indices.end(),indices2.begin(),indices2.end());
+            
+        }else{
+            // cout<<"通常\n";
+            // 通常ケースΦmin<=Φmax
+            auto indices=queryVerticesInRectangle(R);
+            result_indices.insert(result_indices.end(),indices.begin(),indices.end());
         }
 
         return result_indices;
@@ -929,21 +935,29 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 // 2. 球面矩形R0を拡張して，候補パッチRを生成する
                 Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
+                // cout<<"-------------------\n";
                 if(numiI==100) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
-                cout<<"候補パッチR"<<i<<" の作成\n";
+                if(i%10==0) cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
                 // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
                 vector<int> VR=queryVerticesWithWrap(extendedRectangle);
-                cout<<"VRsize="<<VR.size()<<endl;
+                if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
                 if(numiI==100){
                     // 頂点座標の取得
                     vector<Vector3d> VR_vert;
                     for(const auto& index : VR){
+                        cout<<"VR:"<<index<<endl;
                         int index_i=index/3;
                         int index_j=index%3;
 
-                        VR_vert.push_back(S[index_i].row(index_j));
+                        Vector3d vertex=S[index_i].row(index_j);
+                        // 重複チェック
+                        if (uniqueVertices.find(vertex) == uniqueVertices.end()) {
+                            VR_vert.push_back(vertex);
+                            uniqueVertices.insert(vertex);  // 重複していなければセットに追加
+                        }
+
                     }
 
                     vector<Vector3i> fa;
