@@ -30,6 +30,7 @@ typedef bgi::rtree<RTreeValue,bgi::quadratic<16>> RTree;
 struct Rectangle{
     double theta_min,theta_max; // θの範囲
     double phi_min,phi_max; // Φの範囲
+    int kinds; // 矩形の種類(1:北極，2:南極，3:交差，4:通常)
 };
 
 // 元モデル
@@ -71,6 +72,7 @@ struct AC{
     RTree rtree; //range tree
     vector<ProjectPoint> projectedPoints; //投影後の点
     int iI=0;
+    int numiI=0;
 
 
     // デバック用objで可視化
@@ -611,7 +613,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](0)].point.begin(),projectedPoints[G.MF[i](0)].point.end());
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](1)].point.begin(),projectedPoints[G.MF[i](1)].point.end());
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](2)].point.begin(),projectedPoints[G.MF[i](2)].point.end());
-            if(i==100) visualizeMeshToObj(pp3,fa,"pp3.obj");
+            if(i==29) visualizeMeshToObj(pp3,fa,"pp3.obj");
             computeConvexHull(i,pp3); // 凸包の計算とIの定義
             // cout<<"凸包面求めた\n";
                 
@@ -619,7 +621,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         cout<<"凸包出力\n";
 
         // 凸包の頂点と面のチェック
-        writeToOBJ(I[100].region.vertices,I[100].region.cvface,"cvhull.obj");
+        writeToOBJ(I[29].region.vertices,I[29].region.cvface,"cvhull.obj");
 
     }
 
@@ -668,7 +670,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool north_included=false;
         Vector3d north_pole(0,0,1);
         if(dosePlaneIntersectZAxis(vertices,region.region.cvface)==1){
-            rectangles.push_back(Rectangle{0,theta_max,0,2*M_PI});
+            rectangles.push_back(Rectangle{0,theta_max,0,2*M_PI,1});
             north_included=true;
         }
 
@@ -676,7 +678,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool south_included=false;
         Vector3d south_pole(0,0,-1);
         if(dosePlaneIntersectZAxis(vertices,region.region.cvface)==2){
-            rectangles.push_back(Rectangle{theta_min,M_PI,0,2*M_PI});
+            rectangles.push_back(Rectangle{theta_min,M_PI,0,2*M_PI,2});
             south_included=true;
         }
 
@@ -684,8 +686,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool phi_split=false;
         if(phi_min<0 && phi_max>0 && north_included==false && south_included==false){
             // 矩形を二つに分割
-            rectangles.push_back(Rectangle{theta_min,theta_max,0,phi_max});
-            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI});
+            rectangles.push_back(Rectangle{theta_min,theta_max,0,phi_max,3});
+            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI,3});
             phi_split=true;
         }
 
@@ -693,7 +695,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         if(!north_included && !south_included && !phi_split){
             if(phi_min<0) phi_min+=2*M_PI;
             if(phi_max<0) phi_max+=2*M_PI;
-            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max});
+            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max,4});
         }
 
         // if(iI==100){
@@ -712,7 +714,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
 
-        saveRectangleAsOBJ(rectangle_I[100][1],"enclosing_rectangle.obj");
+        saveRectangleAsOBJ(rectangle_I[29][0],"enclosing_rectangle.obj");
     }
 
 
@@ -727,16 +729,26 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         expanded.theta_max=R0.theta_max+delta_theta;
 
         // Φの範囲を拡張
-        expanded.phi_min=R0.phi_min-delta_phi;
-        expanded.phi_max=R0.phi_max+delta_phi;
+        if(R0.kinds==3 || R0.kinds==4){
+            expanded.phi_min=R0.phi_min-delta_phi;
+            expanded.phi_max=R0.phi_max+delta_phi;
+        }else{
+            expanded.phi_min=0;
+            expanded.phi_max=2*M_PI;
+        }
 
         // Φを[0,2π]の範囲に調整
+
         // if(expanded.phi_min<0){
         //     expanded.phi_min+=2*M_PI;
+        //     karioki.phi_max=expanded.phi_min;
         // }
         // if(expanded.phi_max>2*M_PI){
         //     expanded.phi_max-=2*M_PI;
+        //     karioki.phi_min=expanded.phi_max;
         // }
+        // expanded.phi_min=karioki.phi_min;
+        // expanded.phi_max=karioki.phi_max;
 
         return expanded;
     }
@@ -768,6 +780,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     vector<int> queryVerticesInRectangle(const Rectangle& R){
         vector<int> result_indices;
 
+
         // Rの範囲[θmin,θmax]x[Φmin,Φmax]をBox2Dに変換
         Box2D queryBox(Point2D(R.theta_min,R.phi_min),Point2D(R.theta_max,R.phi_max));
 
@@ -783,28 +796,54 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         return result_indices;
     }
     // 経度が0をまたぐ場合への対応
-    vector<int> queryVerticesWithWrap(const Rectangle& R){
+    vector<int> queryVerticesWithWrap(Rectangle& R){
         vector<int> result_indices;
 
-        if(R.phi_min<0 && R.phi_max>0){
-            // Φmin>Φmaxの場合，二つの範囲に分割
-            // cout<<"分割\n";
-            Rectangle R1={R.theta_min,R.theta_max,0,R.phi_max}; // θmin~2π
-            Rectangle R2={R.theta_min,R.theta_max,R.phi_min,2*M_PI}; //0~Φmax
+        // 微小な誤差を許容する範囲を設定(これをしないとΦ=0の弧の点が含まれなくなる)
+        const double epsilon = 1e-10;  // 誤差の許容範囲（適宜調整
 
-            auto indices1=queryVerticesInRectangle(R1);
-            auto indices2=queryVerticesInRectangle(R2);
+        // Φの範囲がずれてたら[0,2π]に調整
+        if(R.phi_min<0) R.phi_min+=2*M_PI;
+        if(R.phi_max>2*M_PI) R.phi_max-=2*M_PI;
 
-            // 結果を結合
-            result_indices.insert(result_indices.end(),indices1.begin(),indices1.end());
-            result_indices.insert(result_indices.end(),indices2.begin(),indices2.end());
-            
-        }else{
-            // cout<<"通常\n";
+        // 極を含んだ場合は通常ケースで処理する
+        if(R.kinds==1 || R.kinds==2){
+            if(numiI==29){
+                cout<<"通常\n";
+                cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
+                saveRectangleAsOBJ(R,"R.obj");
+            }
             // 通常ケースΦmin<=Φmax
             auto indices=queryVerticesInRectangle(R);
             result_indices.insert(result_indices.end(),indices.begin(),indices.end());
+        }else{
+            if(R.phi_min <= R.phi_max){
+                // 通常ケースΦmin<=Φmax
+                auto indices=queryVerticesInRectangle(R);
+                result_indices.insert(result_indices.end(),indices.begin(),indices.end());
+                
+            }else{
+                // Φmin>Φmaxの場合，二つの範囲に分割
+                // cout<<"分割\n";
+                Rectangle R1={R.theta_min,R.theta_max,0-epsilon,R.phi_max}; // θmin~2π
+                Rectangle R2={R.theta_min,R.theta_max,R.phi_min,2*M_PI}; //0~Φmax
+
+                auto indices1=queryVerticesInRectangle(R1);
+                auto indices2=queryVerticesInRectangle(R2);
+                if(numiI==29){
+                    cout<<"分割\n";
+                    saveRectangleAsOBJ(R1,"R1.obj");
+                    cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
+                    saveRectangleAsOBJ(R2,"R2.obj");
+                    cout<<"R2="<<R2.phi_min<<","<<R2.phi_max<<endl;
+                }
+
+                // 結果を結合
+                result_indices.insert(result_indices.end(),indices1.begin(),indices1.end());
+                result_indices.insert(result_indices.end(),indices2.begin(),indices2.end());
+            }
         }
+        
 
         return result_indices;
     }
@@ -927,7 +966,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         double n=sqrt(S.size()/20);
         double dL=L/n;
 
-        int numiI=0;
+        
         for(int i=0;i<rectangle_I.size();i++){
 
             // 面Fiに対応するすべての囲い込み球面矩形を処理
@@ -936,27 +975,24 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 // 2. 球面矩形R0を拡張して，候補パッチRを生成する
                 Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
                 // cout<<"-------------------\n";
-                if(numiI==100) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
+                if(numiI==29) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
                 if(i%10==0) cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
                 // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
                 vector<int> VR=queryVerticesWithWrap(extendedRectangle);
                 if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
-                if(numiI==100){
+                if(numiI==29){
                     // 頂点座標の取得
                     vector<Vector3d> VR_vert;
+                    
                     for(const auto& index : VR){
-                        cout<<"VR:"<<index<<endl;
+                        // cout<<"VR:"<<index<<endl;
                         int index_i=index/3;
                         int index_j=index%3;
 
                         Vector3d vertex=S[index_i].row(index_j);
-                        // 重複チェック
-                        if (uniqueVertices.find(vertex) == uniqueVertices.end()) {
-                            VR_vert.push_back(vertex);
-                            uniqueVertices.insert(vertex);  // 重複していなければセットに追加
-                        }
+                        VR_vert.push_back(vertex);
 
                     }
 
