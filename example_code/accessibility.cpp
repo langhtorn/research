@@ -736,19 +736,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             expanded.phi_min=0;
             expanded.phi_max=2*M_PI;
         }
+        expanded.kinds=R0.kinds;
 
-        // Φを[0,2π]の範囲に調整
-
-        // if(expanded.phi_min<0){
-        //     expanded.phi_min+=2*M_PI;
-        //     karioki.phi_max=expanded.phi_min;
-        // }
-        // if(expanded.phi_max>2*M_PI){
-        //     expanded.phi_max-=2*M_PI;
-        //     karioki.phi_min=expanded.phi_max;
-        // }
-        // expanded.phi_min=karioki.phi_min;
-        // expanded.phi_max=karioki.phi_max;
 
         return expanded;
     }
@@ -805,14 +794,15 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // Φの範囲がずれてたら[0,2π]に調整
         if(R.phi_min<0) R.phi_min+=2*M_PI;
         if(R.phi_max>2*M_PI) R.phi_max-=2*M_PI;
+        // if(numiI==29) cout<<"kinds"<<R.kinds<<endl;
 
         // 極を含んだ場合は通常ケースで処理する
         if(R.kinds==1 || R.kinds==2){
-            if(numiI==29){
-                cout<<"通常\n";
-                cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
-                saveRectangleAsOBJ(R,"R.obj");
-            }
+            // if(numiI==29){
+            //     cout<<"通常\n";
+            //     cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
+            //     saveRectangleAsOBJ(R,"R.obj");
+            // }
             // 通常ケースΦmin<=Φmax
             auto indices=queryVerticesInRectangle(R);
             result_indices.insert(result_indices.end(),indices.begin(),indices.end());
@@ -830,13 +820,13 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 auto indices1=queryVerticesInRectangle(R1);
                 auto indices2=queryVerticesInRectangle(R2);
-                if(numiI==29){
-                    cout<<"分割\n";
-                    saveRectangleAsOBJ(R1,"R1.obj");
-                    cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
-                    saveRectangleAsOBJ(R2,"R2.obj");
-                    cout<<"R2="<<R2.phi_min<<","<<R2.phi_max<<endl;
-                }
+                // if(numiI==29){
+                //     cout<<"分割\n";
+                //     saveRectangleAsOBJ(R1,"R1.obj");
+                //     cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
+                //     saveRectangleAsOBJ(R2,"R2.obj");
+                //     cout<<"R2="<<R2.phi_min<<","<<R2.phi_max<<endl;
+                // }
 
                 // 結果を結合
                 result_indices.insert(result_indices.end(),indices1.begin(),indices1.end());
@@ -981,7 +971,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
                 vector<int> VR=queryVerticesWithWrap(extendedRectangle);
-                if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
+                // if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
                 if(numiI==29){
                     // 頂点座標の取得
                     vector<Vector3d> VR_vert;
