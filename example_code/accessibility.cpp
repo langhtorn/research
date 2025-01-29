@@ -708,13 +708,14 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     } 
     void CALCULATEENCLOSINGRECTANGLE(){
         // writeToOBJ(I[100].region.vertices,I[100].region.cvface,"rectanglecv.obj");
+
         for(const auto& region : I){
             rectangle_I.push_back(calculateEnclosingRectangle(region));
         }
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
 
-        saveRectangleAsOBJ(rectangle_I[29][0],"enclosing_rectangle.obj");
+        saveRectangleAsOBJ(rectangle_I[300][0],"enclosing_rectangle.obj");
     }
 
 
@@ -911,22 +912,19 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         return false; // 含まれていない
     }
     // アクセス可能性行列の更新と占有テスト(候補点VR,単位球の番号，面Fiのアクセス不可能領域)
-    void updateAccessibilityMatrix(const vector<int>& VR,const int Sphere_i,const SphericalPolygon& inaccessibleRegion){
+    void updateAccessibilityMatrix(const vector<Vector3d>& VR,const int Sphere_i,const SphericalPolygon& inaccessibleRegion){
         // 点が領域内になるか判定する
         for(int i=0;i<VR.size();i++){
             // 三角形の頂点を取得
 
-            int vertex_index=VR[i]; // 頂点インデックス
-
             // この頂点がどの三角形に属しているか探す
-            for(int f_idx=0;f_idx<G.MF.size();f_idx++){
-                const Vector3i& face=G.MF[f_idx]; // 三角形の頂点インデックス
+            for(int f_idx=0;f_idx<S.size();f_idx++){
 
                 // 三角形の頂点インデックスの中にVR[i]が含まれていれば，この三角形に関連する
-                if(face[0]==vertex_index || face[1]==vertex_index || face[2]==vertex_index){
-                    const Vector3d& v0=projectedPoints[Sphere_i].point[face[0]];
-                    const Vector3d& v1=projectedPoints[Sphere_i].point[face[1]];
-                    const Vector3d& v2=projectedPoints[Sphere_i].point[face[2]];
+                if(S[f_idx].row(0)==VR[i] || S[f_idx].row(1)==VR[i] || S[f_idx].row(2)==VR[i]){
+                    const Vector3d& v0=S[f_idx].row(0);
+                    const Vector3d& v1=S[f_idx].row(1);
+                    const Vector3d& v2=S[f_idx].row(2);
 
                     // 頂点が全てアクセス不可能領域に含まれているか判定
                     bool isInaccessible=isPointInRegion(v0,inaccessibleRegion) && isPointInRegion(v1,inaccessibleRegion) && isPointInRegion(v2,inaccessibleRegion);
@@ -936,7 +934,6 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                         // VR[i]が関連する三角形がアクセス不可能であれば，対応する行列を更新
                         AccessStatus[Sphere_i][f_idx]=true;
                     }
-                    break;
                 }
             }
 
@@ -956,46 +953,48 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         double n=sqrt(S.size()/20);
         double dL=L/n;
 
-        
+        cout<<"rectangle="<<rectangle_I.size()<<endl;
         for(int i=0;i<rectangle_I.size();i++){
 
             // 面Fiに対応するすべての囲い込み球面矩形を処理
+            cout<<"----------------------------面"<<i<<endl;
             for(const Rectangle& R: rectangle_I[i]){
 
                 // 2. 球面矩形R0を拡張して，候補パッチRを生成する
+                cout<<"候補パッチを作成しましょう\n";
                 Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
                 // cout<<"-------------------\n";
                 if(numiI==29) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
-                if(i%10==0) cout<<"候補パッチR"<<i<<" の作成\n";                
+                cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
                 // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
                 vector<int> VR=queryVerticesWithWrap(extendedRectangle);
+                cout<<"球面頂点VRの取得\n";
                 // if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
-                if(numiI==29){
-                    // 頂点座標の取得
-                    vector<Vector3d> VR_vert;
-                    
-                    for(const auto& index : VR){
-                        // cout<<"VR:"<<index<<endl;
-                        int index_i=index/3;
-                        int index_j=index%3;
+                // 頂点座標の取得
+                vector<Vector3d> VR_vert;
+                
+                for(const auto& index : VR){
+                    // cout<<"VR:"<<index<<endl;
+                    int index_i=index/3;
+                    int index_j=index%3;
 
-                        Vector3d vertex=S[index_i].row(index_j);
-                        VR_vert.push_back(vertex);
+                    Vector3d vertex=S[index_i].row(index_j);
+                    VR_vert.push_back(vertex);
 
-                    }
-
-                    vector<Vector3i> fa;
-                    visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
                 }
+
+                // vector<Vector3i> fa;
+                // visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
+                
 
                 // 4.球面上の候補頂点および候補三角形に対して，占有テストを行う
                 // 各面Fiのアクセス不可能領域に基づく領域を取得
                 const SphericalPolygon& inaccessRegion=I[i].region;
                 // 5.アクセス可能性行列の更新
-                updateAccessibilityMatrix(VR,i,inaccessRegion);
-                
+                updateAccessibilityMatrix(VR_vert,i,inaccessRegion);
+                cout<<"アクセス可能性行列の更新:"<<i<<endl;
             }
             numiI++;
         }
