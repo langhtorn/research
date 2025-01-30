@@ -452,7 +452,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // 各頂点を単位球の中心とする
         for(int i=0;i<G.MV.size();i++){
-            unitSphereCenters.push_back(G.MV[i].normalized());
+            unitSphereCenters.push_back(G.MV[i]);
         }
 
         return unitSphereCenters;
@@ -475,7 +475,6 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             for(int j=0;j<G.MV.size();j++){
 
                 
-                // 面Fの頂点は投影しない
                 if(i==j){
                     // cout<<"Skipping projection for face"<<j<<"on unit sphere"<<i<<endl;
                     continue; // なにもしない
@@ -613,7 +612,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](0)].point.begin(),projectedPoints[G.MF[i](0)].point.end());
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](1)].point.begin(),projectedPoints[G.MF[i](1)].point.end());
             pp3.insert(pp3.end(),projectedPoints[G.MF[i](2)].point.begin(),projectedPoints[G.MF[i](2)].point.end());
-            if(i==29) visualizeMeshToObj(pp3,fa,"pp3.obj");
+            if(i==383) visualizeMeshToObj(pp3,fa,"pp3.obj");
             computeConvexHull(i,pp3); // 凸包の計算とIの定義
             // cout<<"凸包面求めた\n";
                 
@@ -621,7 +620,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         cout<<"凸包出力\n";
 
         // 凸包の頂点と面のチェック
-        writeToOBJ(I[29].region.vertices,I[29].region.cvface,"cvhull.obj");
+        writeToOBJ(I[383].region.vertices,I[383].region.cvface,"cvhull.obj");
 
     }
 
@@ -795,11 +794,11 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // Φの範囲がずれてたら[0,2π]に調整
         if(R.phi_min<0) R.phi_min+=2*M_PI;
         if(R.phi_max>2*M_PI) R.phi_max-=2*M_PI;
-        // if(numiI==29) cout<<"kinds"<<R.kinds<<endl;
+        // if(numiI==383) cout<<"kinds"<<R.kinds<<endl;
 
         // 極を含んだ場合は通常ケースで処理する
         if(R.kinds==1 || R.kinds==2){
-            // if(numiI==29){
+            // if(numiI==383){
             //     cout<<"通常\n";
             //     cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
             //     saveRectangleAsOBJ(R,"R.obj");
@@ -821,7 +820,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 auto indices1=queryVerticesInRectangle(R1);
                 auto indices2=queryVerticesInRectangle(R2);
-                // if(numiI==29){
+                // if(numiI==383){
                 //     cout<<"分割\n";
                 //     saveRectangleAsOBJ(R1,"R1.obj");
                 //     cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
@@ -921,20 +920,20 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             for(int f_idx=0;f_idx<S.size();f_idx++){
 
                 // 三角形の頂点インデックスの中にVR[i]が含まれていれば，この三角形に関連する
-                if(S[f_idx].row(0)==VR[i] || S[f_idx].row(1)==VR[i] || S[f_idx].row(2)==VR[i]){
-                    const Vector3d& v0=S[f_idx].row(0);
-                    const Vector3d& v1=S[f_idx].row(1);
-                    const Vector3d& v2=S[f_idx].row(2);
+                // if(S[f_idx].row(0)==VR[i] || S[f_idx].row(1)==VR[i] || S[f_idx].row(2)==VR[i]){
+                //     const Vector3d& v0=S[f_idx].row(0);
+                //     const Vector3d& v1=S[f_idx].row(1);
+                //     const Vector3d& v2=S[f_idx].row(2);
 
-                    // 頂点が全てアクセス不可能領域に含まれているか判定
-                    bool isInaccessible=isPointInRegion(v0,inaccessibleRegion) && isPointInRegion(v1,inaccessibleRegion) && isPointInRegion(v2,inaccessibleRegion);
+                //     // 頂点が全てアクセス不可能領域に含まれているか判定
+                //     bool isInaccessible=isPointInRegion(v0,inaccessibleRegion) && isPointInRegion(v1,inaccessibleRegion) && isPointInRegion(v2,inaccessibleRegion);
 
-                    // 判定結果をAccessStatusに反映
-                    if(isInaccessible){
-                        // VR[i]が関連する三角形がアクセス不可能であれば，対応する行列を更新
-                        AccessStatus[Sphere_i][f_idx]=true;
-                    }
-                }
+                //     // 判定結果をAccessStatusに反映
+                //     if(isInaccessible){
+                //         // VR[i]が関連する三角形がアクセス不可能であれば，対応する行列を更新
+                //         AccessStatus[Sphere_i][f_idx]=true;
+                //     }
+                // }
             }
 
         }
@@ -964,7 +963,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 cout<<"候補パッチを作成しましょう\n";
                 Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
                 // cout<<"-------------------\n";
-                if(numiI==29) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
+                if(numiI==383) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
                 cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
