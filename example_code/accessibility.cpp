@@ -42,7 +42,6 @@ struct Model{
 // 投影された点と元の頂点のインデックスを管理
 struct ProjectPoint{
     vector<Vector3d> point; //投影された点
-    vector<int> originalIndex; // 元モデルでのインデックス
     int Sphere_Index; // 単位球のインデックス
 };
 
@@ -56,6 +55,10 @@ struct InaccessRegion{
     SphericalPolygon region; // 面fのアクセス不可能領域I
 };
 
+struct Rect{
+    vector<Rectangle> rct; // 1つの囲い込み球面矩形
+};
+
 // アクセシビリティ行列
 using AccessStatusMatrix=vector<vector<bool>>;
 
@@ -67,8 +70,8 @@ struct AC{
     AccessStatusMatrix AccessStatus; // 球面三角形ごとのアクセシビリティを格納する行列(行:球面三角形の数 列:非凸面の数)
     double r; // 境界球の半径
     Model G; // 元モデルの情報 
-    vector<InaccessRegion> I; // 面fに対してアクセス不可能な領域
-    vector<vector<Rectangle>> rectangle_I; // 囲い込み球面矩形
+    vector<vector<InaccessRegion>> I; // 面fに対してアクセス不可能な領域
+    vector<vector<Rect>> rectangle_I; // 囲い込み球面矩形
     RTree rtree; //range tree
     vector<ProjectPoint> projectedPoints; //投影後の点
     int iI=0;
@@ -463,33 +466,31 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         Vector3d direction=(point-sphereCenter).normalized();
         return direction;
     }
-    // 面f'を指定された中心点の単位球に投影する(引数：面f単位球の中心点)
-    void projectFaceOntoSpheres(vector<Vector3d> unitSpheres){
+    // 面f'を単位球Unに投影した結果を返す(引数：面f単位球の中心点,今見ている面のインデックス)
+    vector<ProjectPoint> projectFaceOntoSpheres(vector<Vector3d> unitSpheres,int face_index){
         // cout<<"単位球への投影\n";
         // cout<<"unitSphereSize="<<unitSpheres.size()<<endl;
+        vector<ProjectPoint> pp;
+        Vector3d v1=G.MV[G.MF[face_index](0)];
+        Vector3d v2=G.MV[G.MF[face_index](1)];
+        Vector3d v3=G.MV[G.MF[face_index](2)];
         for(int i=0;i<unitSpheres.size();i++){
 
             vector<Vector3d> pv;
             vector<int> original_i;
 
-            for(int j=0;j<G.MV.size();j++){
+            pv.push_back(ProjectOntoSphere(v1,unitSpheres[i]));
+            pv.push_back(ProjectOntoSphere(v2,unitSpheres[i]));
+            pv.push_back(ProjectOntoSphere(v3,unitSpheres[i]));
+            original_i.push_back(i);
 
-                
-                if(i==j){
-                    // cout<<"Skipping projection for face"<<j<<"on unit sphere"<<i<<endl;
-                    continue; // なにもしない
-                }else{
-                    pv.push_back(ProjectOntoSphere(G.MV[j],unitSpheres[i]));
-                    original_i.push_back(j);
-                }
-            }
-
-            projectedPoints.push_back(ProjectPoint{pv,original_i,i});
+            pp.push_back(ProjectPoint{pv,i});
         }
+        return pp;
     }
     // 凸包を計算する関数(引数：面fの単位球に投影された点　)
-    void computeConvexHull(const int facenum,const vector<Vector3d>& pp){
-        // cout<<"凸包の計算\n";
+    InaccessRegion computeConvexHull(const int facenum,const vector<Vector3d>& pp){
+        vector<InaccessRegion> i_f;
         // 投影された点をMatrixXdに変換
         MatrixXd points(pp.size(),3);
         for(size_t i=0;i<pp.size();i++){
@@ -507,7 +508,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         vector<Vector3d> cvv=matrixtovector(points);
 
         // f が f' によってアクセス不可能な方向の集合 I は、CV の内部領域として定義する
-        I.push_back(InaccessRegion{facenum,SphericalPolygon{cvv,faces}});
+        return InaccessRegion{facenum,SphericalPolygon{cvv,faces}};
 
     }
     // 交差点が三角形の内部にあるか確認
@@ -595,41 +596,40 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // 1.ファセットfの3つの頂点に単位球の構築
         vector<Vector3d> unitSpheres=constructUnitSpheres();
 
-        // 2.元モデルの各面f'を単位球に投影する
-        projectFaceOntoSpheres(unitSpheres);
-        cout<<"単位球への投影完了\n";
-
-        vector<Vector3i> fa={{0,0,0}};
-        // visualizeMeshToObj(projectedPoints[0].point,fa,"projectpoint.obj");
-
-        // 各モデルの各面fに対して
         for(int i=0;i<G.MF.size();i++){
-            // cout<<"面F "<<i<<endl;
 
-            // 3.求めた頂点群に凸包を求める
-            // 面Fの3つの投影点を結合する
-            vector<Vector3d> pp3;
-            pp3.insert(pp3.end(),projectedPoints[G.MF[i](0)].point.begin(),projectedPoints[G.MF[i](0)].point.end());
-            pp3.insert(pp3.end(),projectedPoints[G.MF[i](1)].point.begin(),projectedPoints[G.MF[i](1)].point.end());
-            pp3.insert(pp3.end(),projectedPoints[G.MF[i](2)].point.begin(),projectedPoints[G.MF[i](2)].point.end());
-            if(i==383) visualizeMeshToObj(pp3,fa,"pp3.obj");
-            computeConvexHull(i,pp3); // 凸包の計算とIの定義
-            // cout<<"凸包面求めた\n";
-                
+            // 2.元モデルの各面f'を単位球に投影する
+            vector<ProjectPoint> pp_f=projectFaceOntoSpheres(unitSpheres,i);
+            vector<Vector3i> fa;
+            if(i==383) visualizeMeshToObj(pp_f[10].point,fa,"pp3.obj");
+            // cout<<"単位球への投影完了\n";
+            vector<InaccessRegion> i_f;
+
+            // 3. 求めた頂点群に凸包を求める
+            for(int j=0;j<unitSpheres.size();j++){
+                if(i==j){
+                    continue;
+                }else{
+                    i_f.push_back(computeConvexHull(j,pp_f[j].point));
+                }
+
+            }
+
+            I.push_back(i_f);
         }
         cout<<"凸包出力\n";
 
         // 凸包の頂点と面のチェック
-        writeToOBJ(I[383].region.vertices,I[383].region.cvface,"cvhull.obj");
+        writeToOBJ(I[383][10].region.vertices,I[383][10].region.cvface,"cvhull.obj");
 
     }
 
 
     // ----------------------------------------------------------
     // アクセス不可能領域Iに対して，囲い込み球面矩形R0を計算する関数
-    vector<Rectangle> calculateEnclosingRectangle(const InaccessRegion& region){
+    Rect calculateEnclosingRectangle(const InaccessRegion& region){
 
-        vector<Rectangle> rectangles;
+        Rect rectangles;
 
         const vector<Vector3d>& vertices=region.region.vertices; //凸包の頂点
         // if(iI==100) writeToOBJ(vertices,region.region.cvface,"rectanglecv.obj");
@@ -669,7 +669,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool north_included=false;
         Vector3d north_pole(0,0,1);
         if(dosePlaneIntersectZAxis(vertices,region.region.cvface)==1){
-            rectangles.push_back(Rectangle{0,theta_max,0,2*M_PI,1});
+            rectangles.rct.push_back(Rectangle{0,theta_max,0,2*M_PI,1});
             north_included=true;
         }
 
@@ -677,7 +677,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool south_included=false;
         Vector3d south_pole(0,0,-1);
         if(dosePlaneIntersectZAxis(vertices,region.region.cvface)==2){
-            rectangles.push_back(Rectangle{theta_min,M_PI,0,2*M_PI,2});
+            rectangles.rct.push_back(Rectangle{theta_min,M_PI,0,2*M_PI,2});
             south_included=true;
         }
 
@@ -685,8 +685,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         bool phi_split=false;
         if(phi_min<0 && phi_max>0 && north_included==false && south_included==false){
             // 矩形を二つに分割
-            rectangles.push_back(Rectangle{theta_min,theta_max,0,phi_max,3});
-            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI,3});
+            rectangles.rct.push_back(Rectangle{theta_min,theta_max,0,phi_max,3});
+            rectangles.rct.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI,3});
             phi_split=true;
         }
 
@@ -694,7 +694,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         if(!north_included && !south_included && !phi_split){
             if(phi_min<0) phi_min+=2*M_PI;
             if(phi_max<0) phi_max+=2*M_PI;
-            rectangles.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max,4});
+            rectangles.rct.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max,4});
         }
 
         // if(iI==100){
@@ -708,13 +708,16 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     void CALCULATEENCLOSINGRECTANGLE(){
         // writeToOBJ(I[100].region.vertices,I[100].region.cvface,"rectanglecv.obj");
 
-        for(const auto& region : I){
-            rectangle_I.push_back(calculateEnclosingRectangle(region));
+        for(int i=0;i<I.size();i++){
+            for(const auto& region : I[i]){
+                rectangle_I[i].push_back(calculateEnclosingRectangle(region));
+            }
+            rectangle_I.push_back(rectangle_I[i]);
         }
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
 
-        saveRectangleAsOBJ(rectangle_I[300][0],"enclosing_rectangle.obj");
+        saveRectangleAsOBJ(rectangle_I[300][0].rct[0],"enclosing_rectangle.obj");
     }
 
 
@@ -941,7 +944,6 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
     void OCCUPANCY(){
 
         // 1.アクセス不可能領域Iに対する囲い込み球面矩形R0を計算する
-        // writeToOBJ(I[100].region.vertices,I[100].region.cvface,"occ.obj");
         CALCULATEENCLOSINGRECTANGLE();
 
         // 範囲木の構築
@@ -952,52 +954,50 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         double n=sqrt(S.size()/20);
         double dL=L/n;
 
-        cout<<"rectangle="<<rectangle_I.size()<<endl;
-        for(int i=0;i<rectangle_I.size();i++){
+        for(int k=0;k<rectangle_I.size();k++){
+            for(int i=0;i<rectangle_I[k].size();i++){
 
-            // 面Fiに対応するすべての囲い込み球面矩形を処理
-            cout<<"----------------------------面"<<i<<endl;
-            for(const Rectangle& R: rectangle_I[i]){
+                // 面Fiに対応するすべての囲い込み球面矩形を処理
+                cout<<"----------------------------面"<<i<<endl;
+                for(const Rectangle& R: rectangle_I[k][i].rct){
 
-                // 2. 球面矩形R0を拡張して，候補パッチRを生成する
-                cout<<"候補パッチを作成しましょう\n";
-                Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
-                // cout<<"-------------------\n";
-                if(numiI==383) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
-                cout<<"候補パッチR"<<i<<" の作成\n";                
+                    // 2. 球面矩形R0を拡張して，候補パッチRを生成する
+                    cout<<"候補パッチを作成しましょう\n";
+                    Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
+                    // cout<<"-------------------\n";
+                    if(numiI==383) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
+                    cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
-                // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
-                vector<int> VR=queryVerticesWithWrap(extendedRectangle);
-                cout<<"球面頂点VRの取得\n";
-                // if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
-                // 頂点座標の取得
-                vector<Vector3d> VR_vert;
-                
-                for(const auto& index : VR){
-                    // cout<<"VR:"<<index<<endl;
-                    int index_i=index/3;
-                    int index_j=index%3;
+                    // 3.range-treeを使用して，候補パッチRに含まれる球面頂点VRを取得する
+                    vector<int> VR=queryVerticesWithWrap(extendedRectangle);
+                    cout<<"球面頂点VRの取得\n";
+                    // if(i%10==0) cout<<"VRsize="<<VR.size()<<endl;
+                    // 頂点座標の取得
+                    vector<Vector3d> VR_vert;
+                    
+                    for(const auto& index : VR){
+                        // cout<<"VR:"<<index<<endl;
+                        int index_i=index/3;
+                        int index_j=index%3;
 
-                    Vector3d vertex=S[index_i].row(index_j);
-                    VR_vert.push_back(vertex);
+                        Vector3d vertex=S[index_i].row(index_j);
+                        VR_vert.push_back(vertex);
 
+                    }
+
+                    // vector<Vector3i> fa;
+                    // visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
+                    
+                    // 各面Fiのアクセス不可能領域に基づく領域を取得
+                    const SphericalPolygon& inaccessRegion=I[k][i].region;
+                    // 4.アクセス可能性行列の更新
+                    updateAccessibilityMatrix(VR_vert,i,inaccessRegion);
+                    cout<<"アクセス可能性行列の更新:"<<i<<endl;
                 }
-
-                // vector<Vector3i> fa;
-                // visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
-                
-
-                // 4.球面上の候補頂点および候補三角形に対して，占有テストを行う
-                // 各面Fiのアクセス不可能領域に基づく領域を取得
-                const SphericalPolygon& inaccessRegion=I[i].region;
-                // 5.アクセス可能性行列の更新
-                updateAccessibilityMatrix(VR_vert,i,inaccessRegion);
-                cout<<"アクセス可能性行列の更新:"<<i<<endl;
+                numiI++;
             }
-            numiI++;
         }
-
     }
 
     // アルゴリズム全般はここで
