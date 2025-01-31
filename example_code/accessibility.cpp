@@ -466,26 +466,37 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         Vector3d direction=(point-sphereCenter).normalized();
         return direction;
     }
-    // 面f'を単位球Unに投影した結果を返す(引数：面f単位球の中心点,今見ている面のインデックス)
+    // 面f'を単位球Unに投影した結果を返す(引数：面f単位球の中心点,今見ている面f'のインデックス)
     vector<ProjectPoint> projectFaceOntoSpheres(vector<Vector3d> unitSpheres,int face_index){
-        // cout<<"単位球への投影\n";
-        // cout<<"unitSphereSize="<<unitSpheres.size()<<endl;
+
         vector<ProjectPoint> pp;
-        Vector3d v1=G.MV[G.MF[face_index](0)];
-        Vector3d v2=G.MV[G.MF[face_index](1)];
-        Vector3d v3=G.MV[G.MF[face_index](2)];
-        for(int i=0;i<unitSpheres.size();i++){
+        int fd1=G.MF[face_index](0);
+        int fd2=G.MF[face_index](1);
+        int fd3=G.MF[face_index](2);
+        
+        // 面fiを中心とする単位球にf'を投影
+        for(int i=0;i<G.MF.size();i++){
 
-            vector<Vector3d> pv;
-            vector<int> original_i;
+            vector<Vector3d> pp9;
+            int f1=G.MF[i](0);
+            int f2=G.MF[i](1);
+            int f3=G.MF[i](2);
 
-            pv.push_back(ProjectOntoSphere(v1,unitSpheres[i]));
-            pv.push_back(ProjectOntoSphere(v2,unitSpheres[i]));
-            pv.push_back(ProjectOntoSphere(v3,unitSpheres[i]));
-            original_i.push_back(i);
+            pp9.push_back(ProjectOntoSphere(G.MV[fd1],unitSpheres[f1]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd2],unitSpheres[f1]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd3],unitSpheres[f1]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd1],unitSpheres[f2]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd2],unitSpheres[f2]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd3],unitSpheres[f2]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd1],unitSpheres[f3]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd2],unitSpheres[f3]));
+            pp9.push_back(ProjectOntoSphere(G.MV[fd3],unitSpheres[f3]));
 
-            pp.push_back(ProjectPoint{pv,i});
+            pp.push_back(ProjectPoint{pp9,i});
         }
+
+
+        
         return pp;
     }
     // 凸包を計算する関数(引数：面fの単位球に投影された点　)
@@ -606,9 +617,11 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             vector<InaccessRegion> i_f;
 
             // 3. 求めた頂点群に凸包を求める
-            for(int j=0;j<unitSpheres.size();j++){
+            for(int j=0;j<G.MF.size();j++){
                 if(i==j){
-                    continue;
+                    InaccessRegion dummy;
+                    dummy.faceindex=-1;
+                    i_f.push_back(dummy);
                 }else{
                     i_f.push_back(computeConvexHull(j,pp_f[j].point));
                 }
@@ -616,6 +629,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             }
 
             I.push_back(i_f);
+            if(i%10==0) cout<<"面"<<i<<"の投影完了\n";
         }
         cout<<"凸包出力\n";
 
