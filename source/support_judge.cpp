@@ -88,73 +88,77 @@ void judge::subdivide(int n,Vector3d centerpoint){
     }
 }
 
-// モデルAABBツリーと三角形メッシュとの交差判定
-bool judge::intersect_triangle(MatrixXd TV,MatrixXi TF){
 
-    MatrixXi IF; // 交差する三角形のペアが格納される
-    bool kari=true;
+// AccessStatus行列のfalseの割合が閾値を超えたら除去不能
+vector<bool> determine
 
-    bool intersects=igl::copyleft::cgal::intersect_other(sp.VG_Mver,sp.FG_Mver,TV,TF,kari,IF);
+// // モデルAABBツリーと三角形メッシュとの交差判定
+// bool judge::intersect_triangle(MatrixXd TV,MatrixXi TF){
 
-    if(intersects) return true;
-    else return false;
+//     MatrixXi IF; // 交差する三角形のペアが格納される
+//     bool kari=true;
 
-}
+//     bool intersects=igl::copyleft::cgal::intersect_other(sp.VG_Mver,sp.FG_Mver,TV,TF,kari,IF);
 
-// 中心点から周囲の１点を求める(中心点と正規化された方向ベクトル)
-MatrixXd judge::four_point(Vector3d centerpoint,Vector3d direction){
+//     if(intersects) return true;
+//     else return false;
 
-    MatrixXd fp(1,3);
-    Vector3d v0=direction.unitOrthogonal();
-    Vector3d v1=direction.cross(v0);
-    vector<Vector3d> p;
+// }
 
-    // 周囲の4点求める
-    double scale=1; //中心点からの距離
-    p.push_back(centerpoint+scale*v0+scale*v1);
-    p.push_back(centerpoint+scale*v0-scale*v1);
-    p.push_back(centerpoint-scale*v0+scale*v1);
-    p.push_back(centerpoint-scale*v0-scale*v1);
+// // 中心点から周囲の１点を求める(中心点と正規化された方向ベクトル)
+// MatrixXd judge::four_point(Vector3d centerpoint,Vector3d direction){
 
-    fp.row(0)=p[0].transpose();
+//     MatrixXd fp(1,3);
+//     Vector3d v0=direction.unitOrthogonal();
+//     Vector3d v1=direction.cross(v0);
+//     vector<Vector3d> p;
 
-    for(int i=1;i<4;i++){
-        fp.conservativeResize(fp.rows()+1,fp.cols());
-        fp.row(fp.rows()-1)=p[i].transpose();
-    }
+//     // 周囲の4点求める
+//     double scale=1; //中心点からの距離
+//     p.push_back(centerpoint+scale*v0+scale*v1);
+//     p.push_back(centerpoint+scale*v0-scale*v1);
+//     p.push_back(centerpoint-scale*v0+scale*v1);
+//     p.push_back(centerpoint-scale*v0-scale*v1);
+
+//     fp.row(0)=p[0].transpose();
+
+//     for(int i=1;i<4;i++){
+//         fp.conservativeResize(fp.rows()+1,fp.cols());
+//         fp.row(fp.rows()-1)=p[i].transpose();
+//     }
     
-    return fp;
-}
+//     return fp;
+// }
 
-// 削除できるサポートを探す
-void judge::delete_suppport(){
-    for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
+// // 削除できるサポートを探す
+// void judge::delete_suppport(){
+//     for(int i=0;i<sp.ohvn.size();i++){ //オーバーハング点の番号，サポート番号
 
-        for(int j=0;j<sp.rays_s[i].size();j++){ //始点を決める
-            // 道具ボクセルの作成
+//         for(int j=0;j<sp.rays_s[i].size();j++){ //始点を決める
+//             // 道具ボクセルの作成
             
-            Vector3d direction(0,-1,0); // 初期方向ベクトルは造形方向下向きで
-            Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
+//             Vector3d direction(0,-1,0); // 初期方向ベクトルは造形方向下向きで
+//             Vector3d centerpoint=sp.rays_s[i][j]; //始点を平面の中心点とする
 
-            direction.normalize(); //正規化して単位ベクトルにする
+//             direction.normalize(); //正規化して単位ベクトルにする
             
-            MatrixXd toolpoints; //ツールの頂点座標
-            MatrixXi toolface; //ツールの面座標
+//             MatrixXd toolpoints; //ツールの頂点座標
+//             MatrixXi toolface; //ツールの面座標
 
-            MatrixXd tp1=four_point(centerpoint,direction); //周囲の4点を求める
+//             MatrixXd tp1=four_point(centerpoint,direction); //周囲の4点を求める
 
-            double L=1; //ツールの長さ
-            centerpoint=centerpoint+L*direction; // ツールボクセルの反対側
+//             double L=1; //ツールの長さ
+//             centerpoint=centerpoint+L*direction; // ツールボクセルの反対側
 
-            MatrixXd tp2=four_point(centerpoint,-direction); //下の周囲の4点
-            toolpoints(tp1.rows()+tp2.rows(),tp1.cols());
-            toolpoints<<tp1,
-                        tp2;
+//             MatrixXd tp2=four_point(centerpoint,-direction); //下の周囲の4点
+//             toolpoints(tp1.rows()+tp2.rows(),tp1.cols());
+//             toolpoints<<tp1,
+//                         tp2;
 
-            bool intersects=intersect_triangle(toolpoints,toolface); //交差判定 trueが交差してる
-        }
-    }
-}
+//             bool intersects=intersect_triangle(toolpoints,toolface); //交差判定 trueが交差してる
+//         }
+//     }
+// }
 
 int main(int argc,char* argv[])
 {   
@@ -202,9 +206,14 @@ int main(int argc,char* argv[])
     double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
     Vector3d direction(0,-1,0); //造形方向ベクトル
     vector<int> num; //その面がオーバーハングかどうか(1 or 0)
+    vectir<int> overhung_index;
     for(int i=0;i<F.size();i++){
-        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])) num.push_back(1);
-        else num.push_back(0);
+        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])){ 
+            num.push_back(1);
+            overhung_index.push_back(i);
+        }else{
+            num.push_back(0);
+        } 
     }
 
     // オーバハング点の判定
@@ -232,13 +241,13 @@ int main(int argc,char* argv[])
 
     sp.obj_out(sp.ohp,"oh_point.obj");
 
-    vector<Vector3d> sv; //サポート点情報
-    vector<Vector3i> sf; //サポート面情報
-    sp.l_height();
-    cout<<"h="<<h<<endl;
-    sp.L_support();
-    cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
-    sp.obj_outf(sv,sf,"support_L.obj");
+    // vector<Vector3d> sv; //サポート点情報
+    // vector<Vector3i> sf; //サポート面情報
+    // sp.l_height();
+    // cout<<"h="<<h<<endl;
+    // sp.L_support();
+    // cout<<"sv="<<sv.size()<<" sf="<<sf.size()<<endl;
+    // sp.obj_outf(sv,sf,"support_L.obj");
 
     // // vtk出力，結果の可視化
     // FILE* fpv;
