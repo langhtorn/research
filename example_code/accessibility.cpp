@@ -78,6 +78,24 @@ struct AC{
     int iI=0;
     int numiI=0;
 
+    void writeAccessStatusToFile(const vector<vector<bool>>& AS, const string& filename) {
+        ofstream file(filename);
+        if (!file) {
+            cerr << "Error: Could not open file " << filename << endl;
+            return;
+        }
+
+        for (const auto& row : AS) {
+            for (size_t i = 0; i < row.size(); ++i) {
+                file << row[i];  // `bool` は `0` または `1` として出力される
+                if (i < row.size() - 1) file << " ";  // 列の間にスペースを挿入
+            }
+            file << "\n";  // 行が変わるごとに改行
+        }
+
+        file.close();
+    }
+
 
     // デバック用objで可視化
     // OBJファイル形式で3Dメッシュを出力する関数
@@ -1064,6 +1082,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // 占有テストを行う関数
         OCCUPANCY();
         cout<<"占有テスト\n";
+        writeAccessStatusToFile(AccessStatus,"accesstatusinfo.txt");
         exportAccessStatusToVTK(288,"accessstatus.vtk");
     }
 };
