@@ -130,6 +130,31 @@ void ExportVTK(const Model& G, const vector<int>& NoRemovableFaces, const string
 //     }
 // }
 
+int inum=0;
+
+// OBJファイル形式で3Dメッシュを出力する関数
+    void visualizeMeshToObj(const vector<Vector3d>& vertices, const vector<Vector3i>& faces, const string& filename) {
+        ofstream objFile(filename);
+        
+        if (!objFile.is_open()) {
+            cerr << "Failed to open file for writing: " << filename << endl;
+            return;
+        }
+
+        // 頂点データの書き込み (v x y z)
+        for (const auto& vertex : vertices) {
+            objFile << "v " << vertex.x() << " " << vertex.y() << " " << vertex.z() << endl;
+        }
+
+        // 面データの書き込み (f v1 v2 v3)
+        for (const auto& face : faces) {
+            objFile << "f " << face.x() + 1 << " " << face.y() + 1 << " " << face.z() + 1 << endl;
+        }
+
+        objFile.close();
+        cout << "OBJ file written to: " << filename << endl;
+    }
+
 
 // 三角錐の中に円錐が完全に含まれるか
 // 三角錐の作成
@@ -168,8 +193,8 @@ Vector3d computeCentroid(Model p){
     Sc=computeTriangleArea(A,D,B);
     Sd=computeTriangleArea(A,B,C);
 
-    double ua=Sa/(Sa+Sb+Sc+Sd);
-    return A*Sa;
+    return (A * Sa + B * Sb + C * Sc + D * Sd) / (Sa + Sb + Sc + Sd);
+
 }
 // 内接球の半径
 double computeTriangleInradius(Model p){
@@ -184,7 +209,7 @@ double computeTriangleInradius(Model p){
     Sd=computeTriangleArea(A,B,C);
 
     double V=computeTetrahedronVolume(A,B,C,D);
-    return V*(3/(Sa+Sb+Sc+Sd));
+    return V*(3.0/(Sa+Sb+Sc+Sd));
 }
 // 内接球の円錐の角度を求める
 double ConeAngle(double radius,double l){
@@ -194,6 +219,7 @@ double ConeAngle(double radius,double l){
 bool isSupportRemoval(vector<Vector3d> Si,vector<Vector3d> MG){
     // 三角錐の作成
     Model p=pyramid(Si,MG);
+    if(inum==396) visualizeMeshToObj(p.V,p.F,"sannkakusui.obj");
 
     // 内接球を求める
     Vector3d centroid=computeCentroid(p); // 中心座標
@@ -258,6 +284,7 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G){
             area+=computeTriangleArea(G.V[G.F[i][0]],G.V[G.F[i][1]],G.V[G.F[i][2]]);
             NoRemovableFaces.push_back(i);
         }
+        inum++;
     }
 
     return area;
