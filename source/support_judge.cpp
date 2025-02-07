@@ -193,7 +193,7 @@ Vector3d computeCentroid(Model p){
     Sc=computeTriangleArea(A,D,B);
     Sd=computeTriangleArea(A,B,C);
 
-    return (A * Sa + B * Sb + C * Sc + D * Sd) / (Sa + Sb + Sc + Sd);
+    return A*Sa/(Sa+Sb+Sc+Sd);
 
 }
 // 内接球の半径

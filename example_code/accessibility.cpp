@@ -75,6 +75,7 @@ struct AC{
     vector<vector<Rect>> rectangle_I; // 囲い込み球面矩形
     RTree rtree; //range tree
     vector<ProjectPoint> projectedPoints; //投影後の点
+    vector<int> sn; //南半球か北半球
     int iI=0;
     int numiI=0;
 
@@ -502,16 +503,18 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 // 完全に含まれていたらTRUE
                 if(allPointInHemisphire) AccessStatus[j][i]=true;
                 else AccessStatus[j][i]=false;
+                
             }
         }
     }
+
 
     // 初期化(Fn:非凸面の法線ベクトル)
     void INITIALIZE(){
 
         // visualizeMeshToObj(G.MV,G.MF,"motomesh.obj");
         // 1.境界球の表面を，球面三角形に分割する
-        make_SphericalTriangles(3);
+        make_SphericalTriangles(2);
 
         visualizeSphericalTrianglesToObj(S,"sphericaltriangle.obj");
 
@@ -520,6 +523,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // 3.AccessStatus行列の初期値を設定する
         setAccesStatus();
+
+        exportAccessStatusToVTK(154,"accessstatus0.vtk");
 
         exportAccessStatusF0ToVTK(S, G, AccessStatus, "access_status_F0.vtk");
 
@@ -703,7 +708,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             // 2.元モデルの各面f'を単位球に投影する
             vector<ProjectPoint> pp_f=projectFaceOntoSpheres(unitSpheres,i);
             vector<Vector3i> fa;
-            if(i==396) visualizeMeshToObj(pp_f[288].point,fa,"pp3.obj"); //f288を中心とする単位球にf'396を投影
+            if(i==154) visualizeMeshToObj(pp_f[288].point,fa,"pp3.obj"); //f288を中心とする単位球にf'154を投影
             // cout<<"単位球への投影完了\n";
             vector<InaccessRegion> i_f;
 
@@ -725,7 +730,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         cout<<"凸包出力\n";
 
         // 凸包の頂点と面のチェック
-        writeToOBJ(I[396][288].region.vertices,I[396][288].region.cvface,"cvhull.obj");
+        writeToOBJ(I[154][288].region.vertices,I[154][288].region.cvface,"cvhull.obj");
 
     }
 
@@ -832,7 +837,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
 
-        saveRectangleAsOBJ(rectangle_I[396][288].rct[0],"enclosing_rectangle.obj");
+        saveRectangleAsOBJ(rectangle_I[154][288].rct[0],"enclosing_rectangle.obj");
     }
 
 
@@ -912,11 +917,11 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // Φの範囲がずれてたら[0,2π]に調整
         if(R.phi_min<0) R.phi_min+=2*M_PI;
         if(R.phi_max>2*M_PI) R.phi_max-=2*M_PI;
-        // if(numiI==396) cout<<"kinds"<<R.kinds<<endl;
+        // if(numiI==154) cout<<"kinds"<<R.kinds<<endl;
 
         // 極を含んだ場合は通常ケースで処理する
         if(R.kinds==1 || R.kinds==2){
-            // if(numiI==396){
+            // if(numiI==154){
             //     cout<<"通常\n";
             //     cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
             //     saveRectangleAsOBJ(R,"R.obj");
@@ -938,7 +943,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 auto indices1=queryVerticesInRectangle(R1);
                 auto indices2=queryVerticesInRectangle(R2);
-                // if(numiI==396){
+                // if(numiI==154){
                 //     cout<<"分割\n";
                 //     saveRectangleAsOBJ(R1,"R1.obj");
                 //     cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
@@ -967,7 +972,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 // 三角形の頂点インデックスの中にVR[i]が含まれていれば，この三角形に関連する
                 if(S[f_idx].row(0).transpose()==VR[i] || S[f_idx].row(1).transpose()==VR[i] || S[f_idx].row(2).transpose()==VR[i]){
-                    if(Sphere_i==396 && f_idx==1156) cout<<"中\n";
+                    if(Sphere_i==154 && f_idx==1222) cout<<"中\n";
 
                     const Vector3d& v0=S[f_idx].row(0);
                     const Vector3d& v1=S[f_idx].row(1);
@@ -1029,7 +1034,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                         // 2. 球面矩形R0を拡張して，候補パッチRを生成する
                         Rectangle extendedRectangle=generateCandidatePatch(R,dL,dL);
                         // cout<<"-------------------\n";
-                        if(k==396 && i==288) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
+                        if(k==154 && i==288) saveRectangleAsOBJ(extendedRectangle,"expanded_Rectangle.obj");
                         // cout<<"候補パッチR"<<i<<" の作成\n";                
 
 
@@ -1051,7 +1056,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                         }
                         // cout<<"VRの点配列化\n";
                         
-                        if(k==396 && i==288){
+                        if(k==154 && i==288){
                             vector<Vector3i> fa;
                         visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
                         }
@@ -1083,7 +1088,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         OCCUPANCY();
         cout<<"占有テスト\n";
         writeAccessStatusToFile(AccessStatus,"accesstatusinfo.txt");
-        exportAccessStatusToVTK(396,"accessstatus.vtk");
+        exportAccessStatusToVTK(154,"accessstatus.vtk");
     }
 };
 
