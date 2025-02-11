@@ -744,7 +744,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         Rect rectangles;
 
         const vector<Vector3d>& vertices=region.region.vertices; //凸包の頂点
-        if(iI==382 && jJ==154) cout<<"cvhull.sizein="<<region.faceindex<<endl;
+        // if(iI==382 && jJ==154) cout<<"cvhull.sizein="<<region.faceindex<<endl;
         // if(iI==100) writeToOBJ(vertices,region.region.cvface,"rectanglecv.obj");
 
         // Iが空の場合は処理しない
@@ -798,8 +798,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // 3. Φ=0の弧が領域Iに交差するか判定 極を通らなった場合に確認
         bool phi_split=false;
-        if(iI==382 && jJ==154) cout<<"pm="<<phi_min<<" ,phi_max="<<phi_max<<endl;
-        if(phi_min<=0 && phi_max>=0 && north_included==false && south_included==false){
+        if(iI==382 && jJ==154) cout<<"pm="<<phi_min<<" ,phi_max="<<phi_max<<"tm="<<theta_min<<"t_max="<<theta_max<<endl;
+        if(phi_min<0 && phi_max>0 && north_included==false && south_included==false){
             // 矩形を二つに分割
             rectangles.rct.push_back(Rectangle{theta_min,theta_max,0,phi_max,3});
             rectangles.rct.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI,3});
@@ -816,8 +816,9 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         if(iI==382 && jJ==154){
             cout<<"north:"<<north_included<<" south:"<<south_included<<" phi:"<<phi_split<<endl;
             cout<<"不可能領域のインデックス:"<<region.faceindex<<endl;
+            saveRectangleAsOBJ(rectangles.rct[0],"er.obj");
         }
-        iI++;
+        jJ++;
         return rectangles;
         
     } 
@@ -833,14 +834,15 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                     Rect dummy;
                     ri.push_back(dummy);
                 }else{
+                    
                     ri.push_back(calculateEnclosingRectangle(region));
                 }
                 
             }
             rectangle_I.push_back(ri);
-            if(i%10==0) cout<<"面"<<i<<"の矩形計算完了\n";
-            jJ++;
-            iI=0;
+            if(i%10==0) cout<<"面"<<i<<"'の矩形計算完了\n";
+            jJ=0;
+            iI++;
         }
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
