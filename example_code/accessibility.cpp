@@ -525,7 +525,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // 3.AccessStatus行列の初期値を設定する
         setAccesStatus();
 
-        exportAccessStatusToVTK(382,"accessstatus0.vtk");
+        exportAccessStatusToVTK(109,"accessstatus0.vtk");
 
         exportAccessStatusF0ToVTK(S, G, AccessStatus, "access_status_F0.vtk");
 
@@ -709,7 +709,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             // 2.元モデルの各面f'を単位球に投影する
             vector<ProjectPoint> pp_f=projectFaceOntoSpheres(unitSpheres,i);
             vector<Vector3i> fa;
-            if(i==382) visualizeMeshToObj(pp_f[154].point,fa,"pp3.obj"); //f154を中心とする単位球にf'382を投影
+            if(i==109) visualizeMeshToObj(pp_f[154].point,fa,"pp3.obj"); //f154を中心とする単位球にf'109を投影
             // cout<<"単位球への投影完了\n";
             vector<InaccessRegion> i_f;
 
@@ -731,8 +731,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         cout<<"凸包出力\n";
 
         // 凸包の頂点と面のチェック
-        writeToOBJ(I[382][154].region.vertices,I[382][154].region.cvface,"cvhull.obj");
-        cout<<"cvhull.size="<<I[382][154].region.vertices.size()<<endl;
+        writeToOBJ(I[109][154].region.vertices,I[109][154].region.cvface,"cvhull.obj");
+        cout<<"cvhull.size="<<I[109][154].region.vertices.size()<<endl;
 
     }
 
@@ -744,12 +744,13 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         Rect rectangles;
 
         const vector<Vector3d>& vertices=region.region.vertices; //凸包の頂点
-        // if(iI==382 && jJ==154) cout<<"cvhull.sizein="<<region.faceindex<<endl;
+        // if(iI==109 && jJ==154) cout<<"cvhull.sizein="<<region.faceindex<<endl;
         // if(iI==100) writeToOBJ(vertices,region.region.cvface,"rectanglecv.obj");
 
         // Iが空の場合は処理しない
         if(vertices.empty()){
             // cerr<<"Error: InaccessRegion vector I is empty."<<endl;
+            jJ++;
             return rectangles;
         }
 
@@ -762,7 +763,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // 各頂点の球面座標を計算&北極点と南極点を調べる
         for(const auto& vertex : vertices){
 
-            if(iI==382 && jJ==154) cout<<"V="<<vertex<<endl;
+            if(iI==109 && jJ==154) cout<<"V="<<vertex<<endl;
 
             // 球面座標に変換
             double sphere_r=vertex.norm(); // 半径
@@ -798,8 +799,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
         // 3. Φ=0の弧が領域Iに交差するか判定 極を通らなった場合に確認
         bool phi_split=false;
-        if(iI==382 && jJ==154) cout<<"pm="<<phi_min<<" ,phi_max="<<phi_max<<"tm="<<theta_min<<"t_max="<<theta_max<<endl;
-        if(phi_min<0 && phi_max>0 && north_included==false && south_included==false){
+        if(iI==109 && jJ==154) cout<<"pm="<<phi_min<<" ,phi_max="<<phi_max<<"tm="<<theta_min<<"t_max="<<theta_max<<endl;
+        if(phi_min<0 && phi_max>0 && (phi_max-phi_min)<M_PI && north_included==false && south_included==false){
             // 矩形を二つに分割
             rectangles.rct.push_back(Rectangle{theta_min,theta_max,0,phi_max,3});
             rectangles.rct.push_back(Rectangle{theta_min,theta_max,phi_min+2*M_PI,2*M_PI,3});
@@ -813,7 +814,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
             rectangles.rct.push_back(Rectangle{theta_min,theta_max,phi_min,phi_max,4});
         }
 
-        if(iI==382 && jJ==154){
+        if(iI==109 && jJ==154){
             cout<<"north:"<<north_included<<" south:"<<south_included<<" phi:"<<phi_split<<endl;
             cout<<"不可能領域のインデックス:"<<region.faceindex<<endl;
             saveRectangleAsOBJ(rectangles.rct[0],"er.obj");
@@ -833,8 +834,9 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                 if(region.faceindex==-1){
                     Rect dummy;
                     ri.push_back(dummy);
+                    jJ++;
                 }else{
-                    
+                    // if(iI==109) cout<<"j"<<jJ<<" regionsize="<<region.faceindex<<endl;
                     ri.push_back(calculateEnclosingRectangle(region));
                 }
                 
@@ -847,7 +849,8 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // cout<<"rectangle_size="<<rectangle_I.size()<<endl;
         cout<<" 囲い込み球面矩形R0の確認\n";
 
-        saveRectangleAsOBJ(rectangle_I[382][154].rct[1],"enclosing_rectangle.obj");
+        // cout<<"rctsize="<<rectangle_I[109][154].rct.size()<<endl;
+        saveRectangleAsOBJ(rectangle_I[109][154].rct[0],"enclosing_rectangle.obj");
     }
 
 
@@ -927,11 +930,11 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
         // Φの範囲がずれてたら[0,2π]に調整
         if(R.phi_min<0) R.phi_min+=2*M_PI;
         if(R.phi_max>2*M_PI) R.phi_max-=2*M_PI;
-        // if(numiI==382) cout<<"kinds"<<R.kinds<<endl;
+        // if(numiI==109) cout<<"kinds"<<R.kinds<<endl;
 
         // 極を含んだ場合は通常ケースで処理する
         if(R.kinds==1 || R.kinds==2){
-            // if(numiI==382){
+            // if(numiI==109){
             //     cout<<"通常\n";
             //     cout<<"R="<<R.phi_min<<","<<R.phi_max<<endl;
             //     saveRectangleAsOBJ(R,"R.obj");
@@ -953,7 +956,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
 
                 auto indices1=queryVerticesInRectangle(R1);
                 auto indices2=queryVerticesInRectangle(R2);
-                // if(numiI==382){
+                // if(numiI==109){
                 //     cout<<"分割\n";
                 //     saveRectangleAsOBJ(R1,"R1.obj");
                 //     cout<<"R1="<<R1.phi_min<<","<<R1.phi_max<<endl;
@@ -1066,7 +1069,7 @@ void writeToOBJ(const vector<Vector3d>& vertices, const MatrixXi& faces, const s
                         }
                         // cout<<"VRの点配列化\n";
                         
-                        if(k==382 && i==154){
+                        if(k==109 && i==154){
                             vector<Vector3i> fa;
                         visualizeMeshToObj(VR_vert,fa,"VR_point.obj");
                         }

@@ -343,51 +343,6 @@ int main(int argc,char* argv[])
         }
     }
 
-    vector<Vector3d> buildDirections=subdivide(1);
-
-    // 面のオーバハングを調べる
-    cout<<"面のオーバーハングを調べる"<<sp.FG.size()<<endl;
-    double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
-    for(int i=0;i<buildDirections.size();i++){
-        
-    }
-    Vector3d direction(0,-1,0); //造形方向ベクトル
-    vector<int> num; //その面がオーバーハングかどうか(1 or 0)
-    vector<int> overhung_index;
-    for(int i=0;i<F.size();i++){
-        if(overh(angle,direction,V[F[i](0)],V[F[i](1)],V[F[i](2)])){ 
-            num.push_back(1);
-            overhung_index.push_back(i);
-        }else{
-            num.push_back(0);
-        } 
-    }
-
-    // オーバハング点の判定
-    sp.oh_Fnum(angle,direction); // オーバーハング面の集合を作る
-    // Vの射影
-    for(int i=0;i<V.size();i++){
-        Vector3d vss={V[i](0),sp.four[0](1),V[i](2)};
-        sp.Vs.push_back(vss);
-    }
-
-    for(int i=0;i<sp.oh_fn.size();i++){
-        Vector3i ohf={F[sp.oh_fn[i]](0),F[sp.oh_fn[i]](1),F[sp.oh_fn[i]](2)};
-        sp.oh_F.push_back(ohf);
-    }
-    double h=y_max-sp.four[0](1);
-    vector<int> oh_point=sp.oh_Vnum(sp.gc_V,h); //オーバーハング点の点番号
-    
-    // デバッグ
-    cout<<"gc="<<sp.gc_V.size()<<" ohp="<<oh_point.size()<<endl;
-    for(int i=0;i<oh_point.size();i++){
-        Vector3d op=sp.gc_V[oh_point[i]];
-        sp.ohp.push_back(op);
-    }
-    cout<<"ohpsize="<<sp.ohp.size()<<endl;
-
-    sp.obj_out(sp.ohp,"oh_point.obj");
-
     // アクセス可能性行列の読み込み
     vector<vector<bool>> AS=readAccessStatusFromFile("accesstatusinfo.txt");
 
@@ -396,10 +351,52 @@ int main(int argc,char* argv[])
     Model G=Model{V,F};
     cout<<"モデル作成\n";
 
-    double sp_area=RemovalSupportArea(AS,S,G);
+    vector<Vector3d> buildDirections=subdivide(1);
 
-    cout<<"sp_area="<<sp_area<<endl;
+    // 面のオーバハングを調べる
+    cout<<"面のオーバーハングを調べる"<<sp.FG.size()<<endl;
+    double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
+    for(int i=0;i<buildDirections.size();i++){
+        Vector3d direction=buildDirections[i]; // 造形方向ベクトル
+        vector<int> num; //その面がオーバーハングかどうか(1 or 0)
+        vector<int> overhung_index;
+        for(int j=0;j<F.size();j++){
+            if(overh(angle,direction,V[F[j](0)],V[F[j](1)],V[F[j](2)])){ 
+                num.push_back(1);
+                overhung_index.push_back(j);
+            }else{
+                num.push_back(0);
+            } 
+        }
 
-    ExportVTK(G,NoRemovableFaces,"noremovalface.vtk");
+        // オーバハング点の判定
+        sp.oh_Fnum(angle,direction); // オーバーハング面の集合を作る
+        // Vの射影
+        for(int j=0;j<V.size();j++){
+            Vector3d vss={V[j](0),sp.four[0](1),V[j](2)};
+            sp.Vs.push_back(vss);
+        }
+
+        for(int j=0;j<sp.oh_fn.size();j++){
+            Vector3i ohf={F[sp.oh_fn[j]](0),F[sp.oh_fn[j]](1),F[sp.oh_fn[j]](2)};
+            sp.oh_F.push_back(ohf);
+        }
+        double h=y_max-sp.four[0](1);
+        vector<int> oh_point=sp.oh_Vnum(sp.gc_V,h); //オーバーハング点の点番号
+
+        // デバッグ
+        cout<<"gc="<<sp.gc_V.size()<<" ohp="<<oh_point.size()<<endl;
+        for(int j=0;j<oh_point.size();j++){
+            Vector3d op=sp.gc_V[oh_point[j]];
+            sp.ohp.push_back(op);
+        }
+        cout<<"ohpsize="<<sp.ohp.size()<<endl;
+        sp.obj_out(sp.ohp,"oh_point.obj");
+        double sp_area=RemovalSupportArea(AS,S,G);
+
+        cout<<"sp_area="<<sp_area<<endl;
+
+        ExportVTK(G,NoRemovableFaces,"noremovalface.vtk");
+    }
     
 }
