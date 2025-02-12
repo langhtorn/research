@@ -452,6 +452,10 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
 pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d direction,MatrixXd mv,MatrixXi mf,MatrixXd mf_normals){
     vector<igl::Hit> hits;
 
+    direction.normalize();
+direction += Vector3d(1e-9, 1e-9, 1e-9); // 誤差補正
+
+
     // レイとメッシュの交差を計算
     igl::ray_mesh_intersect(oh_point,direction,mv,mf,hits);
 
@@ -566,6 +570,10 @@ int main(int argc,char* argv[])
     cout<<"モデル作成\n";
 
     vector<Vector3d> buildDirections=subdivide(1);
+    sort(buildDirections.begin(), buildDirections.end(), [](const Vector3d& a, const Vector3d& b) {
+    return a.norm() < b.norm();
+    });
+
     vector<int> NoremovalFaces_min;
     vector<int> NoremovalFaces_max;
 
@@ -636,6 +644,7 @@ int main(int argc,char* argv[])
             direction.y()=-direction.y();
             min_vector=direction;
             NoremovalFaces_min=NoRemovableFaces;
+            max_overhung=oh_pair;
         }
 
         if(sp_area>sp_area_max){
@@ -643,7 +652,7 @@ int main(int argc,char* argv[])
             direction.y()=-direction.y();
             max_vector=direction;
             NoremovalFaces_max=NoRemovableFaces;
-            max_overhung=oh_pair;
+            // max_overhung=oh_pair;
         }
 
         cout<<"";
