@@ -16,6 +16,7 @@
 #include "support_judge.hpp"
 #include<igl/copyleft/cgal/intersect_other.h>
 #include<igl/ray_mesh_intersect.h>
+#include<igl/per_face_normals.h>
 
 using namespace std;
 using namespace Eigen;
@@ -26,6 +27,99 @@ struct Model{
 };
 
 vector<int> NoRemovableFaces; // 除去不能な面のインデックス
+
+// VTKファイルを書き出す関数
+void writeVTK(const string& filename, const MatrixXd& V, const MatrixXi& F, const vector<pair<int,int>>& oh_pair) {
+    ofstream file(filename);
+    if (!file) {
+        cerr << "エラー: VTKファイルを開けません: " << filename << endl;
+        return;
+    }
+
+    file << "# vtk DataFile Version 3.0\n";
+    file << "VTK output from support_judge\n";
+    file << "ASCII\n";
+    file << "DATASET POLYDATA\n";
+
+    // 頂点の書き出し
+    file << "POINTS " << V.rows() << " float\n";
+    for (int i = 0; i < V.rows(); i++) {
+        file << V(i, 0) << " " << V(i, 1) << " " << V(i, 2) << "\n";
+    }
+
+    // 面の書き出し
+    int num_faces = 0;
+    for (const auto& p : oh_pair) {
+        num_faces++;  // オーバーハング面
+        if (p.second != -1) num_faces++;  // 相方の面
+    }
+    file << "POLYGONS " << num_faces << " " << num_faces * 4 << "\n";
+
+    for (const auto& p : oh_pair) {
+        file << "3 " << F(p.first, 0) << " " << F(p.first, 1) << " " << F(p.first, 2) << "\n";
+        if (p.second != -1) {
+            file << "3 " << F(p.second, 0) << " " << F(p.second, 1) << " " << F(p.second, 2) << "\n";
+        }
+    }
+
+    // 色データの書き出し
+    file << "CELL_DATA " << num_faces << "\n";
+    file << "SCALARS FaceType int 1\n";
+    file << "LOOKUP_TABLE default\n";
+
+    for (const auto& p : oh_pair) {
+        file << "1\n"; // オーバーハング面（赤）
+        if (p.second != -1) {
+            file << "2\n"; // 相方の面（青）
+        }
+    }
+
+    file.close();
+    cout << "✅ VTKファイルを書き出しました: " << filename << endl;
+}
+
+// VTKファイルを書き出す関数
+void writeVTKoh(const string& filename, const MatrixXd& V, const MatrixXi& F, const vector<int>& oh_fn) {
+    ofstream file(filename);
+    if (!file) {
+        cerr << "エラー: VTKファイルを開けません: " << filename << endl;
+        return;
+    }
+
+    file << "# vtk DataFile Version 3.0\n";
+    file << "VTK output for overhang faces\n";
+    file << "ASCII\n";
+    file << "DATASET POLYDATA\n";
+
+    // 頂点の書き出し
+    file << "POINTS " << V.rows() << " float\n";
+    for (int i = 0; i < V.rows(); i++) {
+        file << V(i, 0) << " " << V(i, 1) << " " << V(i, 2) << "\n";
+    }
+
+    // 面の書き出し
+    file << "POLYGONS " << F.rows() << " " << F.rows() * 4 << "\n";
+    for (int i = 0; i < F.rows(); i++) {
+        file << "3 " << F(i, 0) << " " << F(i, 1) << " " << F(i, 2) << "\n";
+    }
+
+    // 色付けのための CELL_DATA を作成
+    unordered_set<int> oh_faces(oh_fn.begin(), oh_fn.end()); // 高速検索用
+    file << "CELL_DATA " << F.rows() << "\n";
+    file << "SCALARS OverhangFace int 1\n";
+    file << "LOOKUP_TABLE default\n";
+    
+    for (int i = 0; i < F.rows(); i++) {
+        if (oh_faces.count(i)) {
+            file << "1\n";  // オーバーハング面 → 赤色
+        } else {
+            file << "0\n";  // 通常の面 → 灰色
+        }
+    }
+
+    file.close();
+    cout << "✅ VTKファイルを書き出しました: " << filename << endl;
+}
 
 void ExportVTK(const Model& G, const vector<int>& NoRemovableFaces, const string& filename) {
     ofstream file(filename);
@@ -292,14 +386,17 @@ vector<vector<bool>> readAccessStatusFromFile(const string& filename) {
 double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<int,int>> oh){
     double area=0;
     for(int i=0;i<oh.size();i++){
+        
         bool i_flg=false;
         bool i_flg_aikata=false;
         int ohnum=oh[i].first;
         int aikata=oh[i].second;
+        // cout<<"情報取得\n";
         for(int j=0;j<AS.size();j++){
 
             // オーバーハング面の除去判定
             if(AS[j][ohnum]){
+                // cout<<"ohnum="<<ohnum<<endl;
                 vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
                 vector<Vector3d> Gi={G.V[G.F[ohnum][0]],G.V[G.F[ohnum][1]],G.V[G.F[ohnum][2]]};
                 
@@ -307,12 +404,17 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
                     // cout<<i<<" 除去可能\n";
 
                     i_flg=true;
-                    break;
                 }
                 jnum++;
             }
             // 相方の除去判定
-            if(AS[j][aikata]){
+            if(aikata==-1 && i_flg==true){
+                i_flg_aikata=true;
+                break;
+            }
+            // オーバーハング面が除去可能で相方が地面でないとき
+            if(i_flg && aikata!=-1 && AS[j][aikata]){
+                // cout<<"aikata="<<aikata<<endl;
                 vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
                 vector<Vector3d> Gi={G.V[G.F[aikata][0]],G.V[G.F[aikata][1]],G.V[G.F[aikata][2]]};
                 
@@ -327,11 +429,19 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
 
         }
         jnum=0;
+        // cout<<"除去判定おわり\n";
+        // 除去不可能になった面積の集計
         if(i_flg==false || i_flg_aikata==false){
             area+=computeTriangleArea(G.V[G.F[ohnum][0]],G.V[G.F[ohnum][1]],G.V[G.F[ohnum][2]]);
-            area+=computeTriangleArea(G.V[G.F[aikata][0]],G.V[G.F[aikata][1]],G.V[G.F[aikata][2]]);
-            NoRemovableFaces.push_back(i);
+             NoRemovableFaces.push_back(ohnum);
+
+            if(aikata!=-1){
+                area+=computeTriangleArea(G.V[G.F[aikata][0]],G.V[G.F[aikata][1]],G.V[G.F[aikata][2]]);
+                NoRemovableFaces.push_back(aikata);
+            }
+           
         }
+        // cout<<"面積の集計\n";
         inum++;
     }
 
@@ -339,7 +449,7 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
 }
 
 // オーバーハング面と向かいあっている面のペアを作る
-pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d direction,MatrixXd mv,MatrixXi mf){
+pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d direction,MatrixXd mv,MatrixXi mf,MatrixXd mf_normals){
     vector<igl::Hit> hits;
 
     // レイとメッシュの交差を計算
@@ -352,6 +462,15 @@ pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d directio
     double min_t=hits[0].t;
 
     for(const auto& hit : hits){
+
+        if(hit.id==fnum) continue;
+
+        // 交差した面の法線を取得
+        Vector3d faceNormal = mf_normals.row(hit.id).normalized();
+
+        // レイの方向と法線の向きを確認
+        if (faceNormal.dot(direction) >= 0) continue;  // 逆向きなら無視
+
         if(hit.t<min_t){
             min_t=hit.t;
             closestFace=hit.id;
@@ -362,6 +481,36 @@ pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d directio
 
 }
 
+// VTKファイルを書き出す関数（1つのベクトル用）
+void writeVTKVector(const string& filename, const Vector3d& start, const Vector3d& direction) {
+    ofstream file(filename);
+    if (!file) {
+        cerr << "エラー: VTKファイルを開けません: " << filename << endl;
+        return;
+    }
+
+    file << "# vtk DataFile Version 3.0\n";
+    file << "VTK Vector Output\n";
+    file << "ASCII\n";
+    file << "DATASET POLYDATA\n";
+
+    // 1つの点（ベクトルの始点）を出力
+    file << "POINTS 1 float\n";
+    file << start(0) << " " << start(1) << " " << start(2) << "\n";
+
+    // ベクトルデータの出力
+    file << "POINT_DATA 1\n";
+    file << "VECTORS direction float\n";
+    file << direction(0) << " " << direction(1) << " " << direction(2) << "\n";
+
+    file.close();
+    cout << "✅ VTKファイルを書き出しました: " << filename << endl;
+}
+
+// ラジアンを度に変換
+double radToDeg(double rad) {
+    return rad * (180.0 / M_PI);
+}
 
 int main(int argc,char* argv[])
 {   
@@ -417,13 +566,31 @@ int main(int argc,char* argv[])
     cout<<"モデル作成\n";
 
     vector<Vector3d> buildDirections=subdivide(1);
+    vector<int> NoremovalFaces_min;
+    vector<int> NoremovalFaces_max;
 
     // 面のオーバハングを調べる
     cout<<"面のオーバーハングを調べる"<<sp.FG.size()<<endl;
     double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
-    for(int i=0;i<1;i++){
-        // Vector3d direction=buildDirections[i]; // 造形方向ベクトル
-        Vector3d direction(0,-1,0);
+    double sp_area_min=10000; // 最小除去不能面積
+    Vector3d min_vector;
+    vector<int> Noremoval_min;
+    double sp_area_max=-1; // 最大除去不能面積
+    Vector3d max_vector;
+    vector<int> Noremoval_max;
+    vector<pair<int,int>> max_overhung;
+    cout<<"builddirection="<<buildDirections.size()<<endl;
+    
+    for(int i=0;i<buildDirections.size();i++){
+        // cout<<"造形方向回転開始\n";
+        cout<<i<<endl;
+        NoRemovableFaces.clear();
+        sp.ohp.clear();
+        sp.oh_F.clear();
+        sp.oh_fn.clear();
+        Vector3d direction=buildDirections[i]; // 造形方向ベクトル
+        direction.y()=direction.y()*(-1);
+        // Vector3d direction(0,-1,0);
         vector<int> num; //その面がオーバーハングかどうか(1 or 0)
         vector<int> overhung_index;
         for(int j=0;j<F.size();j++){
@@ -434,44 +601,79 @@ int main(int argc,char* argv[])
                 num.push_back(0);
             } 
         }
+        // cout<<"オーバーハング面の作成\n";
 
         // オーバハング点の判定
         sp.oh_Fnum(angle,direction); // オーバーハング面の集合を作る
-        // Vの射影
-        for(int j=0;j<V.size();j++){
-            Vector3d vss={V[j](0),sp.four[0](1),V[j](2)};
-            sp.Vs.push_back(vss);
-        }
+        // cout<<"オーバーハング面の面番号集合作成\n";
+        // // Vの射影
+        // for(int j=0;j<V.size();j++){
+        //     Vector3d vss={V[j](0),sp.four[0](1),V[j](2)};
+        //     sp.Vs.push_back(vss);
+        // }
 
         for(int j=0;j<sp.oh_fn.size();j++){
             Vector3i ohf={F[sp.oh_fn[j]](0),F[sp.oh_fn[j]](1),F[sp.oh_fn[j]](2)};
             sp.oh_F.push_back(ohf);
         }
-        double h=y_max-sp.four[0](1);
-        vector<int> oh_point=sp.oh_Vnum(sp.gc_V,h); //オーバーハング点の点番号
 
-        cout<<"gc="<<sp.gc_V.size()<<" ohp="<<oh_point.size()<<endl;
-        for(int j=0;j<oh_point.size();j++){
-            Vector3d op=sp.gc_V[oh_point[j]];
-            sp.ohp.push_back(op);
-        }
-        cout<<"ohpsize="<<sp.ohp.size()<<endl;
-        sp.obj_out(sp.ohp,"oh_point.obj");
         // オーバーハング面と向かいあっている面のペアを作る
+        MatrixXd mf_normals;
+        igl::per_face_normals(mv,mf,mf_normals);
         vector<pair<int,int>> oh_pair;
         for(int j=0;j<sp.oh_fn.size();j++){
             Vector3i f=sp.FG[sp.oh_fn[j]]; // オーバハング面の頂点インデックス
             Vector3d centroid=(sp.VG[f(0)]+sp.VG[f(1)]+sp.VG[f(2)])/3.0;
-            pair<int,int> oh_p=findfirstIntersection(centroid,sp.oh_fn[j],direction,mv,mf);
+            pair<int,int> oh_p=findfirstIntersection(centroid,sp.oh_fn[j],direction,mv,mf,mf_normals);
             oh_pair.push_back(oh_p);
         }
-        
-        cout<<"除去可能な場所の判定\n";
+    
         double sp_area=RemovalSupportArea(AS,S,G,oh_pair);
+        // cout<<"除去可能な場所の判定\n";
 
-        cout<<"sp_area="<<sp_area<<endl;
+        if(sp_area<sp_area_min){
+            sp_area_min=sp_area;
+            direction.y()=-direction.y();
+            min_vector=direction;
+            NoremovalFaces_min=NoRemovableFaces;
+        }
 
-        ExportVTK(G,NoRemovableFaces,"noremovalface.vtk");
+        if(sp_area>sp_area_max){
+            sp_area_max=sp_area;
+            direction.y()=-direction.y();
+            max_vector=direction;
+            NoremovalFaces_max=NoRemovableFaces;
+            max_overhung=oh_pair;
+        }
+
+        cout<<"";
+
+        // cout<<"sp_area="<<sp_area<<endl;
+
+        // writeVTKoh("overhung.vtk",mv,mf,sp.oh_fn);
+
+        // writeVTK("oh_pair.vtk",mv,mf,oh_pair);
+
+        // ExportVTK(G,NoRemovableFaces,"noremovalface.vtk");
     }
+
+    cout<<"sp_area_min="<<sp_area_min<<"direction_min="<<min_vector<<endl;
+    cout<<"sp_area_max="<<sp_area_max<<"direction_max="<<max_vector<<endl;
+    writeVTKVector("direction.vtk",{0,0,0},min_vector);
+    writeVTK("oh_pair.vtk",mv,mf,max_overhung);
+
+    // 回転角の計算
+    double yaw_min=atan2(min_vector.y(),min_vector.x()); // z周り
+    double pitch_min=atan2(sqrt(min_vector.x()*min_vector.x()+min_vector.y()*min_vector.y()),min_vector.z()); // y周り
+    double roll_min=0; // x軸周り
+    cout<<"min angle={"<<radToDeg(roll_min)<<","<<radToDeg(pitch_min)<<","<<radToDeg(yaw_min)<<"}\n";
+
+    double yaw_max=atan2(max_vector.y(),max_vector.x()); // z周り
+    double pitch_max=atan2(sqrt(max_vector.x()*max_vector.x()+max_vector.y()*max_vector.y()),max_vector.z()); // y周り
+    double roll_max=0; // x軸周り
+    cout<<"max angle={"<<radToDeg(roll_max)<<","<<radToDeg(pitch_max)<<","<<radToDeg(yaw_max)<<"}\n";
+
+    ExportVTK(G,NoremovalFaces_min,"noremovalface_min.vtk");
+    ExportVTK(G,NoremovalFaces_max,"noremocalface_max.vtk");
     
 }
