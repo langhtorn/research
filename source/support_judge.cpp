@@ -15,6 +15,7 @@
 #include "support.hpp"
 #include "support_judge.hpp"
 #include<igl/copyleft/cgal/intersect_other.h>
+#include<igl/ray_mesh_intersect.h>
 
 using namespace std;
 using namespace Eigen;
@@ -133,6 +134,7 @@ vector<Vector3d> subdivide(int n){
 }
 
 int inum=0;
+int jnum=0;
 
 // OBJファイル形式で3Dメッシュを出力する関数
     void visualizeMeshToObj(const vector<Vector3d>& vertices, const vector<Vector3i>& faces, const string& filename) {
@@ -159,13 +161,23 @@ int inum=0;
 
 
 // 三角錐の中に円錐が完全に含まれるか
+// 三角錐の頂点選択
+Vector3d selectApex(vector<Vector3d> MG){
+    Vector3d apex=MG[0];
+    for(int i=1;i<3;i++){
+        if(MG[i].y()>apex.y()){
+            apex=MG[i];
+        }
+    }
+    return apex;
+}
 // 三角錐の作成
 Model pyramid(vector<Vector3d> triangle,vector<Vector3d> up){
 
     Model pyramid;
 
     pyramid.V=triangle;
-    Vector3d g=(up[0]+up[1]+up[2])/3.0;
+    Vector3d g=selectApex(up);
     pyramid.V.push_back(g);
 
     pyramid.F.push_back(Vector3i(0,1,3));
@@ -230,7 +242,7 @@ double ConeAngle(double radius,double l){
 bool isSupportRemoval(vector<Vector3d> Si,vector<Vector3d> MG){
     // 三角錐の作成
     Model p=pyramid(Si,MG);
-    if(inum==396) visualizeMeshToObj(p.V,p.F,"sannkakusui.obj");
+    // if(inum==287 && jnum==0) visualizeMeshToObj(p.V,p.F,"sannkakusui.obj");
 
     // 内接球を求める
     Vector3d centroid=computeCentroid(p); // 中心座標
@@ -238,6 +250,7 @@ bool isSupportRemoval(vector<Vector3d> Si,vector<Vector3d> MG){
 
     double l=(p.V[3]-centroid).norm();
     double cangle=ConeAngle(radius,l);
+    // if(inum==287 && jnum==0) cout<<"cangle="<<cangle<<endl;
 
     double toolangle=0.183261; // 10.5°
     if(cangle>=toolangle){
@@ -276,29 +289,77 @@ vector<vector<bool>> readAccessStatusFromFile(const string& filename) {
 }
 
 // 各オーバーハング面に対して除去可能かみて，不可能になった面の面積の総計を求める
-double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G){
+double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<int,int>> oh){
     double area=0;
-    for(int i=0;i<G.F.size();i++){
+    for(int i=0;i<oh.size();i++){
         bool i_flg=false;
+        bool i_flg_aikata=false;
+        int ohnum=oh[i].first;
+        int aikata=oh[i].second;
         for(int j=0;j<AS.size();j++){
-            if(AS[j][i]){
+
+            // オーバーハング面の除去判定
+            if(AS[j][ohnum]){
                 vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
-                vector<Vector3d> Gi={G.V[G.F[i][0]],G.V[G.F[i][1]],G.V[G.F[i][2]]};
+                vector<Vector3d> Gi={G.V[G.F[ohnum][0]],G.V[G.F[ohnum][1]],G.V[G.F[ohnum][2]]};
+                
                 if(isSupportRemoval(Si,Gi)){
-                    cout<<"除去可能\n";
+                    // cout<<i<<" 除去可能\n";
+
                     i_flg=true;
                     break;
                 }
+                jnum++;
             }
+            // 相方の除去判定
+            if(AS[j][aikata]){
+                vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
+                vector<Vector3d> Gi={G.V[G.F[aikata][0]],G.V[G.F[aikata][1]],G.V[G.F[aikata][2]]};
+                
+                if(isSupportRemoval(Si,Gi)){
+                    // cout<<i<<" 除去可能\n";
+
+                    i_flg_aikata=true;
+                    break;
+                }
+                jnum++;
+            }
+
         }
-        if(i_flg==false){
-            area+=computeTriangleArea(G.V[G.F[i][0]],G.V[G.F[i][1]],G.V[G.F[i][2]]);
+        jnum=0;
+        if(i_flg==false || i_flg_aikata==false){
+            area+=computeTriangleArea(G.V[G.F[ohnum][0]],G.V[G.F[ohnum][1]],G.V[G.F[ohnum][2]]);
+            area+=computeTriangleArea(G.V[G.F[aikata][0]],G.V[G.F[aikata][1]],G.V[G.F[aikata][2]]);
             NoRemovableFaces.push_back(i);
         }
         inum++;
     }
 
     return area;
+}
+
+// オーバーハング面と向かいあっている面のペアを作る
+pair<int,int> findfirstIntersection(Vector3d oh_point,int fnum,Vector3d direction,MatrixXd mv,MatrixXi mf){
+    vector<igl::Hit> hits;
+
+    // レイとメッシュの交差を計算
+    igl::ray_mesh_intersect(oh_point,direction,mv,mf,hits);
+
+    if(hits.empty()) return {fnum,-1};
+
+    // 最も近い交差点の面を取得
+    int closestFace=hits[0].id;
+    double min_t=hits[0].t;
+
+    for(const auto& hit : hits){
+        if(hit.t<min_t){
+            min_t=hit.t;
+            closestFace=hit.id;
+        }
+    }
+
+    return {fnum,closestFace};
+
 }
 
 
@@ -310,6 +371,7 @@ int main(int argc,char* argv[])
     vector<Vector3i> F;
     ro reado;
     spt sp;
+    vt vtom;
 
     if(argc==1){
         cout<<"入力してください\n";
@@ -349,6 +411,9 @@ int main(int argc,char* argv[])
     Model S;
     reado.readPoint(S.V,S.F,"sphericaltriangle.obj");
     Model G=Model{V,F};
+    MatrixXd mv;
+    MatrixXi mf;
+    vtom.vmat(G.V,G.F,mv,mf);
     cout<<"モデル作成\n";
 
     vector<Vector3d> buildDirections=subdivide(1);
@@ -356,8 +421,9 @@ int main(int argc,char* argv[])
     // 面のオーバハングを調べる
     cout<<"面のオーバーハングを調べる"<<sp.FG.size()<<endl;
     double angle=0.5235987755983; //閾値:cura35度(0.6108652381980153)，45度：0.7853981633974483,30度0.5235987755983
-    for(int i=0;i<buildDirections.size();i++){
-        Vector3d direction=buildDirections[i]; // 造形方向ベクトル
+    for(int i=0;i<1;i++){
+        // Vector3d direction=buildDirections[i]; // 造形方向ベクトル
+        Vector3d direction(0,-1,0);
         vector<int> num; //その面がオーバーハングかどうか(1 or 0)
         vector<int> overhung_index;
         for(int j=0;j<F.size();j++){
@@ -384,7 +450,6 @@ int main(int argc,char* argv[])
         double h=y_max-sp.four[0](1);
         vector<int> oh_point=sp.oh_Vnum(sp.gc_V,h); //オーバーハング点の点番号
 
-        // デバッグ
         cout<<"gc="<<sp.gc_V.size()<<" ohp="<<oh_point.size()<<endl;
         for(int j=0;j<oh_point.size();j++){
             Vector3d op=sp.gc_V[oh_point[j]];
@@ -392,7 +457,17 @@ int main(int argc,char* argv[])
         }
         cout<<"ohpsize="<<sp.ohp.size()<<endl;
         sp.obj_out(sp.ohp,"oh_point.obj");
-        double sp_area=RemovalSupportArea(AS,S,G);
+        // オーバーハング面と向かいあっている面のペアを作る
+        vector<pair<int,int>> oh_pair;
+        for(int j=0;j<sp.oh_fn.size();j++){
+            Vector3i f=sp.FG[sp.oh_fn[j]]; // オーバハング面の頂点インデックス
+            Vector3d centroid=(sp.VG[f(0)]+sp.VG[f(1)]+sp.VG[f(2)])/3.0;
+            pair<int,int> oh_p=findfirstIntersection(centroid,sp.oh_fn[j],direction,mv,mf);
+            oh_pair.push_back(oh_p);
+        }
+        
+        cout<<"除去可能な場所の判定\n";
+        double sp_area=RemovalSupportArea(AS,S,G,oh_pair);
 
         cout<<"sp_area="<<sp_area<<endl;
 

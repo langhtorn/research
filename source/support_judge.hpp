@@ -9,8 +9,8 @@ class judge{
     public:
 
     spt sp; //サポート情報
-    vector<Vector3d> samplingV; //サンプリング点
-    vector<Vector3i> samplingF; //サンプリングした際にできる面
+    std::vector<Eigen::Vector3d> samplingV; //サンプリング点
+    std::vector<Eigen::Vector3i> samplingF; //サンプリングした際にできる面
     double r; //球の半径
 
     // 球面サンプリング
