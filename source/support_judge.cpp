@@ -26,8 +26,6 @@ struct Model{
     vector<Vector3i> F;
 };
 
-vector<int> NoRemovableFaces; // 除去不能な面のインデックス
-
 // VTKファイルを書き出す関数
 void writeVTK(const string& filename, const MatrixXd& V, const MatrixXi& F, const vector<pair<int,int>>& oh_pair) {
     ofstream file(filename);
@@ -383,7 +381,8 @@ vector<vector<bool>> readAccessStatusFromFile(const string& filename) {
 }
 
 // 各オーバーハング面に対して除去可能かみて，不可能になった面の面積の総計を求める
-double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<int,int>> oh){
+double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<int,int>> oh,vector<int>& NoRemovableFaces){
+    NoRemovableFaces.clear();
     double area=0;
     for(int i=0;i<oh.size();i++){
         
@@ -396,6 +395,7 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
 
             // オーバーハング面の除去判定
             if(AS[j][ohnum]){
+                if(ohnum==514) cout<<"中\n";
                 // cout<<"ohnum="<<ohnum<<endl;
                 vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
                 vector<Vector3d> Gi={G.V[G.F[ohnum][0]],G.V[G.F[ohnum][1]],G.V[G.F[ohnum][2]]};
@@ -441,9 +441,12 @@ double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<in
             }
            
         }
+        
         // cout<<"面積の集計\n";
         inum++;
     }
+    // cout<<"NoRemovalFaces="<<NoRemovableFaces.size()<<endl;
+    
 
     return area;
 }
@@ -592,7 +595,6 @@ int main(int argc,char* argv[])
     for(int i=0;i<buildDirections.size();i++){
         // cout<<"造形方向回転開始\n";
         cout<<i<<endl;
-        NoRemovableFaces.clear();
         sp.ohp.clear();
         sp.oh_F.clear();
         sp.oh_fn.clear();
@@ -635,8 +637,9 @@ int main(int argc,char* argv[])
             pair<int,int> oh_p=findfirstIntersection(centroid,sp.oh_fn[j],direction,mv,mf,mf_normals);
             oh_pair.push_back(oh_p);
         }
-    
-        double sp_area=RemovalSupportArea(AS,S,G,oh_pair);
+        
+        vector<int> NoRemovableFaces;
+        double sp_area=RemovalSupportArea(AS,S,G,oh_pair,NoRemovableFaces);
         // cout<<"除去可能な場所の判定\n";
 
         if(sp_area<sp_area_min){
@@ -655,7 +658,7 @@ int main(int argc,char* argv[])
             // max_overhung=oh_pair;
         }
 
-        cout<<"";
+        // cout<<"noremovalface="<<NoRemovableFaces.size();
 
         // cout<<"sp_area="<<sp_area<<endl;
 
