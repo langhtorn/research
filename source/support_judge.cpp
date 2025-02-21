@@ -380,6 +380,30 @@ vector<vector<bool>> readAccessStatusFromFile(const string& filename) {
     return AS;
 }
 
+// 除去不可能面を判定する．除去不可能面の面番号
+vector<int> removal_num(vector<vector<bool>> AS,Model S,Model G){
+    
+    vector<int> rf;
+    for(int i=0;i<G.F.size();i++){
+
+        bool i_flg=false;
+
+        for(int j=0;j<AS.size();j++){
+            if(AS[j][i]){
+                vector<Vector3d> Si={S.V[S.F[j][0]],S.V[S.F[j][1]],S.V[S.F[j][2]]};
+                vector<Vector3d> Gi={G.V[G.F[i][0]],G.V[G.F[i][1]],G.V[G.F[i][2]]};
+
+                if(isSupportRemoval(Si,Gi)){
+                    rf.push_back(i);
+                    i_flg=true;
+                }
+            }
+        }
+    }
+
+    return rf;
+}
+
 // 各オーバーハング面に対して除去可能かみて，不可能になった面の面積の総計を求める
 double RemovalSupportArea(vector<vector<bool>> AS,Model S,Model G,vector<pair<int,int>> oh,vector<int>& NoRemovableFaces){
     NoRemovableFaces.clear();
@@ -564,7 +588,7 @@ int main(int argc,char* argv[])
     // アクセス可能性行列の読み込み
     vector<vector<bool>> AS=readAccessStatusFromFile("accesstatusinfo.txt");
 
-    Model S;
+    Model S; // 球面三角形
     reado.readPoint(S.V,S.F,"sphericaltriangle.obj");
     Model G=Model{V,F};
     MatrixXd mv;
@@ -591,6 +615,10 @@ int main(int argc,char* argv[])
     vector<int> Noremoval_max;
     vector<pair<int,int>> max_overhung;
     cout<<"builddirection="<<buildDirections.size()<<endl;
+
+    // 除去不可能面事前調査
+    vector<int> rm=removal_num(AS,S,G);
+    ExportVTK(G,rm,"rm.vtk");
     
     for(int i=0;i<buildDirections.size();i++){
         // cout<<"造形方向回転開始\n";
